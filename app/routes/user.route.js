@@ -1,9 +1,9 @@
-const express = require("express");
+const express = require('express');
 const app = express();
-const users = require("../controllers/user.controller");
+const userController = require('../controllers/user.controller');
 
 // Retrieve all user
-app.get("/user", users.findAll);
-app.post("/user/register", users.register);
+app.get('/user', userController.findAll);
+app.post('/user/register', userController.register);
 
 module.exports = app;
