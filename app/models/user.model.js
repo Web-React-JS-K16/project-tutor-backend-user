@@ -9,6 +9,7 @@ const UserSchema = mongoose.Schema(
     email: String,
     password: String,
     hashedPassword: String,
+    avatar: String,
     displayName: String,
     phone: String,
     birthdate: Date,
@@ -26,6 +27,10 @@ const UserSchema = mongoose.Schema(
 
 UserSchema.methods.setHashedPassword = function(password) {
   this.hashedPassword = bcrypt.hashSync(password, saltRounds);
+};
+
+UserSchema.methods.setAvatar = function(avatar) {
+  this.avatar = avatar;
 };
 
 UserSchema.methods.validatePassword = function(password) {
