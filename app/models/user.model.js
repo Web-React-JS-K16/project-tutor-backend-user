@@ -1,6 +1,6 @@
-const EUserType = require('../enums/EUserTypes');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const EUserType = require("../enums/EUserTypes");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const saltRounds = 10;
 
@@ -8,7 +8,7 @@ const UserSchema = mongoose.Schema(
   {
     email: String,
     password: String,
-    hashedPassword: String,
+    passwordHash: String,
     displayName: String,
     phone: String,
     birthdate: Date,
@@ -24,12 +24,12 @@ const UserSchema = mongoose.Schema(
   }
 );
 
-UserSchema.methods.setHashedPassword = function(password) {
-  this.hashedPassword = bcrypt.hashSync(password, saltRounds);
+UserSchema.methods.setpasswordHash = function(password) {
+  this.passwordHash = bcrypt.hashSync(password, saltRounds);
 };
 
 UserSchema.methods.validatePassword = function(password) {
-  return bcrypt.compareSync(password, this.hashedPassword);
+  return bcrypt.compareSync(password, this.passwordHash);
 };
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports = mongoose.model("User", UserSchema);
