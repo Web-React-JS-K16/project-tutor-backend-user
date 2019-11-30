@@ -32,19 +32,5 @@ UserSchema.methods.validatePassword = function(password) {
   return bcrypt.compareSync(password, this.passwordHash);
 };
 
-UserSchema.methods.createUser = function ({avatar, displayName, email, googleId=null, facebookId = null}) {
-  const newUser = new User();
-  newUser.avatar = avatar;
-  newUser.displayName = displayName;
-  newUser.email = email;
-  if (googleId){
-    newUser.googleID = googleId;
-  } 
-  
-  if (facebookId) {
-    newUser.facebookID = facebookId;
-  }
-  return newUser;
-};
 
 module.exports = mongoose.model("User", UserSchema);

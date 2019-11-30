@@ -11,7 +11,8 @@ app.post("/user/login", userController.login); //login with email and password
  * Login with fb/gg
  * Create a new one if user not exist in db
  * */ 
+app.post("/user/authen-with-social", userController.authenWithSocial); 
 
-app.post("/user/login-with-social", userController.loginWithSocial); 
+
 
 module.exports = app;
