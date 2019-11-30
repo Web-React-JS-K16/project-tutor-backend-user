@@ -3,6 +3,7 @@ const passport = require("passport");
 const jwt = require("jsonwebtoken");
 const jwtSecretConfig = require("../../config/jwt-secret.config");
 const userUtils = require("../utils/user.utils");
+const sendEmailUtils = require("../utils/send-email.utils");
 // Retrieving and return all users to the database
 exports.findAll = (req, res) => {
   User.find()
@@ -38,7 +39,11 @@ exports.register = (req, res) => {
     user
       .save()
       .then(data => {
-        res.send({ data });
+        // send active email
+        const token = userUtils.createActiveEmailTokenWithId(data._id);
+        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
+
+        res.status(200).send({ data });
       })
       .catch(err => {
         console.log("error: ", err);
@@ -59,7 +64,7 @@ exports.login = (req, res) => {
         message: "Email hoặc mật khẩu không đúng"
       });
     }
-    if (user.typeID !== req.body.typeID){
+    if (user.typeID !== req.body.typeID) {
       return res.status(400).json({
         status: false,
         message: "Tài khoản không hợp lệ"
@@ -89,9 +94,9 @@ exports.login = (req, res) => {
  * input: {avatar, displayName, email, typeID, googleId, facebookID}
  * Create a new one if user not exist in db
  */
-exports.authenWithSocial =  (req, res) => {
-  const { email, facebookID, googleID, typeID} = req.body;
-  User.findOne({ email}, (err, data) => {
+exports.authenWithSocial = (req, res) => {
+  const { email, facebookID, googleID, typeID } = req.body;
+  User.findOne({ email }, (err, data) => {
     if (err) {
       return res
         .status(500)
@@ -99,32 +104,32 @@ exports.authenWithSocial =  (req, res) => {
     }
     if (!data) { // create new user
       const user = new User(req.body);
-       user.save()
+      user.save()
         .catch((err) => {
           console.log("error: ", err);
           return res
             .status(500)
             .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại" });
         });
-    } else if (data){
-        // check typeId
-        if (data.typeID !== typeID) {
-          return res
-            .status(400)
-            .send({message: 'Tài khoản không hợp lệ' });
-        }
-        if (data.facebookID !== facebookID) { // update facebookID
-          User.updateOne({ email }, { $set: { "facebookID": facebookID } }, (err, rs) => {
-            //  console.log("after update:", rs);
-          });
-        }
+    } else if (data) {
+      // check typeId
+      if (data.typeID !== typeID) {
+        return res
+          .status(400)
+          .send({ message: 'Tài khoản không hợp lệ' });
+      }
+      if (data.facebookID !== facebookID) { // update facebookID
+        User.updateOne({ email }, { $set: { "facebookID": facebookID } }, (err, rs) => {
+          //  console.log("after update:", rs);
+        });
+      }
 
-        if (data.googleID !== googleID) { // update googleID
-          console.log("on update googleid: ");
-          User.updateOne({ email }, { $set: { "googleID": googleID } }, (err, rs) => {
-            //  console.log("after update:", rs);
-          });
-        }
+      if (data.googleID !== googleID) { // update googleID
+        console.log("on update googleid: ");
+        User.updateOne({ email }, { $set: { "googleID": googleID } }, (err, rs) => {
+          //  console.log("after update:", rs);
+        });
+      }
     }
 
     const token = userUtils.createUserToken(req.body);
@@ -133,12 +138,61 @@ exports.authenWithSocial =  (req, res) => {
       .status(200)
       .send({ user: { ...req.body, token } });
 
-  }).catch((err) =>{
+  }).catch((err) => {
     console.log("catch err: ", err);
     return res
       .status(500)
       .send({ message: err.message });
   })
 };
+
+/**
+ * body: {token}
+ */
+exports.activeEmail = (req, res) => {
+  const { token } = req.body;
+  const { userId } = userUtils.decodeActiveEmailToken(token);
+  if (userId) {
+    User.findOne({ _id: userId }, (err, data) => {
+      if (data) {
+        if (data.isAcitved) {
+          return res.status(400).send({ message: "Tài khoản đã được kích hoạt" });
+        }
+        // update isAcitved
+        User.updateOne({ _id: userId }, { $set: { "isAcitved": true } }, (err, result) => {
+          if (result) {
+            return res.status(200).send({ message: "Kích hoạt tài khoản thành công" });
+          } else {
+            return res.status(400).send({ message: "Kích hoạt tài khoản thất bại" });
+          }
+        })
+      } else {
+        return res.status(400).send({ message: "Tài khoản không tồn tại" });
+      }
+    })
+  } else {
+    return res.status(400).send({ message: "Link đã hết hạn hoặc không hợp lệ" });
+  }
+}
+
+/**
+ * body: {email}
+ */
+exports.resendActiveEmail = (req, res) => {
+  const { email } = req.body;
+  try {
+    User.findOne({ email }, (err, data) => {
+      if (!data) {
+        res.status(400).send({ message: "Tài khoản không tồn tại" });
+      } else {
+        const token = userUtils.createActiveEmailTokenWithId(data._id);
+        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
+        res.status(200).send({ message: "Gửi lại email thành công" });
+      }
+    })
+  } catch (err) {
+    res.status(400).send({ message: "Có lỗi xảy ra" });
+  }
+}
 
 
