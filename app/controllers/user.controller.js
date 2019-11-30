@@ -1,4 +1,7 @@
-const User = require('../models/user.model');
+const User = require("../models/user.model");
+const passport = require("passport");
+const jwt = require("jsonwebtoken");
+const jwtSecretConfig = require("../../config/jwt-secret.config");
 // Retrieving and return all users to the database
 exports.findAll = (req, res) => {
   User.find()
@@ -7,7 +10,7 @@ exports.findAll = (req, res) => {
     })
     .catch(err => {
       res.status(500).send({
-        message: 'Đã có lỗi xảy ra khi lấy danh sách người dùng.'
+        message: "Đã có lỗi xảy ra khi lấy danh sách người dùng."
       });
     });
 };
@@ -15,32 +18,63 @@ exports.findAll = (req, res) => {
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(400).send({
-      message: 'Email hoặc mật khẩu trống.'
+      message: "Email hoặc mật khẩu trống."
     });
   }
   User.findOne({ email: req.body.email }, (err, data) => {
     if (err) {
       return res
         .status(500)
-        .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+        .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại!" });
     }
     if (data) {
       return res
         .status(400)
-        .send({ message: 'Email đã tồn tại, vui lòng nhập email khác.' });
+        .send({ message: "Email đã tồn tại, vui lòng nhập email khác." });
     }
     const user = new User(req.body);
-    user.setHashedPassword(req.body.password);
+    user.setpasswordHash(req.body.password);
     user
       .save()
       .then(data => {
         res.send({ data });
       })
       .catch(err => {
-        console.log('error: ', err);
+        console.log("error: ", err);
         return res
           .status(500)
-          .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
+          .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại" });
       });
   });
+};
+
+// login with email and password
+exports.login = (req, res) => {
+  passport.authenticate("local", { session: false }, (err, user, info) => {
+    if (err || !user) {
+      console.log("err", err);
+      return res.status(200).json({
+        status: false,
+        message: "Email hoặc mật khẩu không đúng"
+      });
+    }
+
+    req.login(user, { session: false }, err => {
+      if (err) {
+        return res.status(400).json({
+          status: false,
+          message: "Xảy ra lỗi"
+        });
+      }
+      // generate a signed son web token with the contents of user object and return it in the response
+      const { email, displayName, avatar, _id } = user;
+      const token = jwt.sign(
+        { email, displayName, avatar, _id },
+        jwtSecretConfig.jwtSecret
+      );
+      return res
+        .status(200)
+        .json({ user: { email, displayName, avatar, _id, token } });
+    });
+  })(req, res);
 };
