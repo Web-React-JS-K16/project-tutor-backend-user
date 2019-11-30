@@ -195,4 +195,23 @@ exports.resendActiveEmail = (req, res) => {
   }
 }
 
+/**
+ * body: {email}
+ */
+exports.sendMailResetPassword = (req, res) => {
+  const { email } = req.body;
+  try {
+    User.findOne({ email }, (err, data) => {
+      if (!data) {
+        res.status(400).send({ message: "Tài khoản không tồn tại" });
+      } else {
+        const token = userUtils.createResetPasswordTokenWithId(data._id);
+        sendEmailUtils.sendResetPasswordEmail(data.displayName, data.email, token);
+        res.status(200).send({ message: "Gửi email lấy lại mật khẩu thành công" });
+      }
+    })
+  } catch (err) {
+    res.status(400).send({ message: "Có lỗi xảy ra" });
+  }
+}
 
