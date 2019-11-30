@@ -7,4 +7,11 @@ app.get("/user", userController.findAll);
 app.post("/user/register", userController.register);
 app.post("/user/login", userController.login); //login with email and password
 
+/**
+ * Login with fb/gg
+ * Create a new one if user not exist in db
+ * */ 
+
+app.post("/user/login-with-social", userController.loginWithSocial); 
+
 module.exports = app;
