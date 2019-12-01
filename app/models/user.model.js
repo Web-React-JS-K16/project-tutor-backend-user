@@ -9,6 +9,7 @@ const UserSchema = mongoose.Schema(
     email: String,
     password: String,
     passwordHash: String,
+    avatar: String,
     displayName: String,
     phone: String,
     birthdate: Date,
@@ -33,6 +34,10 @@ UserSchema.methods.validatePassword = function(password) {
     return false;
   }
   return bcrypt.compareSync(password, this.passwordHash);
+};
+
+UserSchema.methods.setAvatar = function(avatar) {
+  this.avatar = avatar;
 };
 
 module.exports = mongoose.model('User', UserSchema);

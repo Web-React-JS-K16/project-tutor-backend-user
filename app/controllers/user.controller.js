@@ -35,6 +35,9 @@ exports.register = (req, res) => {
     }
     const user = new User(req.body);
     user.setPasswordHash(req.body.password);
+    var avatar =
+      'https://cdn.pixabay.com/photo/2016/11/18/23/38/child-1837375_960_720.png';
+    user.setAvatar(avatar);
     user
       .save()
       .then(data => {
