@@ -1,11 +1,19 @@
-const express = require("express");
+const express = require('express');
 const app = express();
-const userController = require("../controllers/user.controller");
+const passport = require('passport');
+const userController = require('../controllers/user.controller');
 
 // Retrieve all user
-app.get("/user", userController.findAll);
-app.post("/user/register", userController.register);
-app.post("/user/login", userController.login); //login with email and password
+app.get('/user', userController.findAll);
+app.get(
+  '/user/authenticate',
+  passport.authenticate('jwt', { session: false }),
+  function(req, res, next) {
+    res.send(req.user);
+  }
+);
+app.post('/user/register', userController.register);
+app.post('/user/login', userController.login); //login with email and password
 
 /**
  * Login with fb/gg
@@ -31,10 +39,7 @@ app.post("/user/resend-active-email", userController.resendActiveEmail);
 app.post("/user/send-email-reset-password", userController.sendMailResetPassword);
 app.post("/user/verify-token-reset-password", userController.verifyTokenResetPassword);
 app.post("/user/reset-password", userController.resetPassword);
-
-
-
-app.get("/test", userController.test); 
+// app.get("/test", userController.test); 
 
 
 module.exports = app;

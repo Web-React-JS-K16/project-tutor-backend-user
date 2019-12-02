@@ -12,7 +12,7 @@ exports.findAll = (req, res) => {
     })
     .catch(err => {
       res.status(500).send({
-        message: "Đã có lỗi xảy ra khi lấy danh sách người dùng."
+        message: 'Đã có lỗi xảy ra khi lấy danh sách người dùng.'
       });
     });
 };
@@ -20,61 +20,63 @@ exports.findAll = (req, res) => {
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(400).send({
-      message: "Email hoặc mật khẩu trống."
+      message: 'Email hoặc mật khẩu trống.'
     });
   }
   User.findOne({ email: req.body.email }, (err, data) => {
     if (err) {
       return res
         .status(500)
-        .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại!" });
+        .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
     }
     if (data) {
       return res
         .status(400)
-        .send({ message: "Email đã tồn tại, vui lòng nhập email khác." });
+        .send({ message: 'Email đã tồn tại, vui lòng nhập email khác.' });
     }
     const user = new User(req.body);
-    user.setpasswordHash(req.body.password);
+    user.setPasswordHash(req.body.password);
+    var avatar =
+      'https://cdn.pixabay.com/photo/2016/11/18/23/38/child-1837375_960_720.png';
+    user.setAvatar(avatar);
     user
       .save()
       .then(data => {
         // send active email
         const token = userUtils.createActiveEmailTokenWithId(data._id);
         sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
-
-        res.status(200).send({ data });
+        res.status(200).send({ user: data });
       })
       .catch(err => {
-        console.log("error: ", err);
+        console.log('error: ', err);
         return res
           .status(500)
-          .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại" });
+          .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
       });
   });
 };
 
 // login with email and password
 exports.login = (req, res) => {
-  passport.authenticate("local", { session: false }, (err, user, info) => {
+  passport.authenticate('local', { session: false }, (err, user, info) => {
     if (err || !user) {
-      console.log("err", err);
+      console.log('err', err);
       return res.status(400).json({
         status: false,
-        message: "Email hoặc mật khẩu không đúng"
+        message: 'Email hoặc mật khẩu không đúng'
       });
     }
     if (user.typeID !== req.body.typeID) {
       return res.status(400).json({
         status: false,
-        message: "Tài khoản không hợp lệ"
+        message: 'Tài khoản không hợp lệ'
       });
     }
     req.login(user, { session: false }, err => {
       if (err) {
         return res.status(400).json({
           status: false,
-          message: "Xảy ra lỗi"
+          message: 'Xảy ra lỗi'
         });
       }
       // generate a signed son web token with the contents of user object and return it in the response
@@ -100,9 +102,10 @@ exports.authenWithSocial = (req, res) => {
     if (err) {
       return res
         .status(500)
-        .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại!" });
+        .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
     }
-    if (!data) { // create new user
+    if (!data) {
+      // create new user
       const user = new User(req.body);
       user.save()
         .catch((err) => {
@@ -291,4 +294,3 @@ exports.test = (req, res) => {
     res.status(400).send({ message: "Có lỗi xảy ra" });
   }
 }
-
