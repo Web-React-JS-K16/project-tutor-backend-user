@@ -14,7 +14,7 @@ app.post("/user/login", userController.login); //login with email and password
 app.post("/user/authen-with-social", userController.authenWithSocial);
 
 /**
- * Active account
+ * Active account by token that was sent in email
  * body: {token}
  */
 app.post("/user/active-email", userController.activeEmail);
@@ -28,7 +28,8 @@ app.post("/user/resend-active-email", userController.resendActiveEmail);
  * Send email to reset password
  * body: {email}
  */
-app.post("/user/send-reset-password-email", userController.sendMailResetPassword); 
+app.post("/user/send-reset-password-email", userController.sendMailResetPassword);
+app.get("/test", userController.test); 
 
 
 module.exports = app;

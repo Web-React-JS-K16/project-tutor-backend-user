@@ -51,7 +51,7 @@ const sendEmail = (to, subject, contentEmail) => {
  */
 exports.sendVerificationEmail = (name, to, token) => {
     const subject = "Kích hoạt tài khoản";
-    const content = `Chào ${name}, mời bạn click vào link dưới đây để kích hoạt tài khoản: ${hostUrl}/active-email?token=${token}&email=${to}`;
+    const content = `Chào ${name}, mời bạn click vào link dưới đây để kích hoạt tài khoản: ${hostUrl}/active-email/${token}/${to}`;
     sendEmail(to, subject, content);
 };
 
@@ -60,6 +60,6 @@ exports.sendVerificationEmail = (name, to, token) => {
  */
 exports.sendResetPasswordEmail = (name, to, token) => {
     const subject = "Lấy lại mật khẩu";
-    const content = `Chào ${name}, mời bạn click vào link dưới đây để thay đổi mật khẩu: ${hostUrl}/reset-password?token=${token}&email=${to}`;
+    const content = `Chào ${name}, mời bạn click vào link dưới đây để thay đổi mật khẩu: ${hostUrl}/reset-password/${token}/${to}`;
     sendEmail(to, subject, contentEmail);
 };

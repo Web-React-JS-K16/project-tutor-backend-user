@@ -149,27 +149,27 @@ exports.authenWithSocial = (req, res) => {
 /**
  * body: {token}
  */
-exports.activeEmail = (req, res) => {
+exports.activeEmail = async (req, res) => {
   const { token } = req.body;
-  const { userId } = userUtils.decodeActiveEmailToken(token);
+  const { userId } = await userUtils.decodeActiveEmailToken(token);
+  // console.log("user id: ", userId);
   if (userId) {
-    User.findOne({ _id: userId }, (err, data) => {
+    const data = await User.findOne({ _id: userId });
       if (data) {
         if (data.isAcitved) {
           return res.status(400).send({ message: "Tài khoản đã được kích hoạt" });
         }
         // update isAcitved
-        User.updateOne({ _id: userId }, { $set: { "isAcitved": true } }, (err, result) => {
+        const result = await User.updateOne({ _id: userId }, { $set: { "isActived": true } });
           if (result) {
             return res.status(200).send({ message: "Kích hoạt tài khoản thành công" });
           } else {
             return res.status(400).send({ message: "Kích hoạt tài khoản thất bại" });
           }
-        })
+        
       } else {
         return res.status(400).send({ message: "Tài khoản không tồn tại" });
       }
-    })
   } else {
     return res.status(400).send({ message: "Link đã hết hạn hoặc không hợp lệ" });
   }
@@ -208,6 +208,24 @@ exports.sendMailResetPassword = (req, res) => {
         const token = userUtils.createResetPasswordTokenWithId(data._id);
         sendEmailUtils.sendResetPasswordEmail(data.displayName, data.email, token);
         res.status(200).send({ message: "Gửi email lấy lại mật khẩu thành công" });
+      }
+    })
+  } catch (err) {
+    res.status(400).send({ message: "Có lỗi xảy ra" });
+  }
+}
+
+exports.test = (req, res) => {
+  const { email } = req.body;
+  console.log("email: ", email);
+  try {
+    User.findOne({ email }, (err, data) => {
+      if (!data) {
+        res.status(400).send({ message: "Tài khoản không tồn tại" });
+      } else {
+        const token = userUtils.createActiveEmailTokenWithId(data._id);
+        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
+        res.status(200).send({ message: "Gửi email  thành công" });
       }
     })
   } catch (err) {
