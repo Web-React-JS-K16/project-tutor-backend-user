@@ -2,7 +2,6 @@ const jwt = require("jsonwebtoken");
 const jwtSecretConfig = require("../../config/jwt-secret.config");
 
 
-
 exports.createUserToken = (info) =>{
     const token = jwt.sign(
         { ...info },
@@ -10,3 +9,39 @@ exports.createUserToken = (info) =>{
     );
     return token
 }
+//=============
+exports.createActiveEmailTokenWithId = userId =>{
+    const token = jwt.sign( { userId },
+        jwtSecretConfig.jwtSecretForActiveEmail,
+        { expiresIn: "2 days" });
+    return token;
+}
+
+exports.decodeActiveEmailToken = async (token) => {
+    try {
+    const result = await jwt.verify(token, jwtSecretConfig.jwtSecretForActiveEmail)
+    // console.log("result: ", result);
+    return result;
+    } catch {
+        return null;
+    }
+}
+//=============
+//=============
+exports.createResetPasswordTokenWithId = async userId => {
+    const token = await jwt.sign({ userId },
+        jwtSecretConfig.jwtSecretForResetPassword,
+        { expiresIn: "2 days" });
+    return token;
+}
+
+exports.decodeResetPasswordToken = async token => {
+    try {
+        const result =await jwt.verify(token, jwtSecretConfig.jwtSecretForResetPassword)
+        return result;
+    } catch {
+        return null;
+    }
+}
+
+//=============

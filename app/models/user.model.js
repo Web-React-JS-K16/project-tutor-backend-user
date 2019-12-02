@@ -18,6 +18,15 @@ const UserSchema = mongoose.Schema(
     typeID: {
       type: Number,
       default: EUserType.STUDENT
+    },
+    gender: String,
+    isBlock:{
+      type: Boolean,
+      default: false
+    },
+    isActived:{
+      type: Boolean,
+      default: false
     }
   },
   {
