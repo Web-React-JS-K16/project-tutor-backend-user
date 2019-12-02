@@ -18,22 +18,30 @@ exports.createActiveEmailTokenWithId = userId =>{
 }
 
 exports.decodeActiveEmailToken = async (token) => {
+    try {
     const result = await jwt.verify(token, jwtSecretConfig.jwtSecretForActiveEmail)
     // console.log("result: ", result);
     return result;
+    } catch {
+        return null;
+    }
 }
 //=============
 //=============
-exports.createResetPasswordTokenWithId = userId => {
-    const token = jwt.sign({ userId },
+exports.createResetPasswordTokenWithId = async userId => {
+    const token = await jwt.sign({ userId },
         jwtSecretConfig.jwtSecretForResetPassword,
         { expiresIn: "2 days" });
     return token;
 }
 
-exports.decodeResetPasswordToken = token => {
-    const result = jwt.verify(token, jwtSecretConfig.jwtSecretForResetPassword)
-    return result;
+exports.decodeResetPasswordToken = async token => {
+    try {
+        const result =await jwt.verify(token, jwtSecretConfig.jwtSecretForResetPassword)
+        return result;
+    } catch {
+        return null;
+    }
 }
 
 //=============

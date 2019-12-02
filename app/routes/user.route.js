@@ -28,7 +28,12 @@ app.post("/user/resend-active-email", userController.resendActiveEmail);
  * Send email to reset password
  * body: {email}
  */
-app.post("/user/send-reset-password-email", userController.sendMailResetPassword);
+app.post("/user/send-email-reset-password", userController.sendMailResetPassword);
+app.post("/user/verify-token-reset-password", userController.verifyTokenResetPassword);
+app.post("/user/reset-password", userController.resetPassword);
+
+
+
 app.get("/test", userController.test); 
 
 

@@ -151,27 +151,31 @@ exports.authenWithSocial = (req, res) => {
  */
 exports.activeEmail = async (req, res) => {
   const { token } = req.body;
-  const { userId } = await userUtils.decodeActiveEmailToken(token);
-  // console.log("user id: ", userId);
-  if (userId) {
-    const data = await User.findOne({ _id: userId });
+  try {
+    const { userId } = await userUtils.decodeActiveEmailToken(token);
+    // console.log("user id: ", userId);
+    if (userId) {
+      const data = await User.findOne({ _id: userId });
       if (data) {
         if (data.isAcitved) {
           return res.status(400).send({ message: "Tài khoản đã được kích hoạt" });
         }
         // update isAcitved
         const result = await User.updateOne({ _id: userId }, { $set: { "isActived": true } });
-          if (result) {
-            return res.status(200).send({ message: "Kích hoạt tài khoản thành công" });
-          } else {
-            return res.status(400).send({ message: "Kích hoạt tài khoản thất bại" });
-          }
-        
+        if (result) {
+          return res.status(200).send({ message: "Kích hoạt tài khoản thành công" });
+        } else {
+          return res.status(400).send({ message: "Kích hoạt tài khoản thất bại" });
+        }
+
       } else {
         return res.status(400).send({ message: "Tài khoản không tồn tại" });
       }
-  } else {
-    return res.status(400).send({ message: "Link đã hết hạn hoặc không hợp lệ" });
+    } else {
+      return res.status(400).send({ message: "Link đã hết hạn hoặc không hợp lệ" });
+    }
+  } catch {
+    return res.status(400).send({ message: "Có lỗi xảy ra" });
   }
 }
 
@@ -198,22 +202,77 @@ exports.resendActiveEmail = (req, res) => {
 /**
  * body: {email}
  */
-exports.sendMailResetPassword = (req, res) => {
+exports.sendMailResetPassword = async (req, res) => {
   const { email } = req.body;
   try {
-    User.findOne({ email }, (err, data) => {
-      if (!data) {
-        res.status(400).send({ message: "Tài khoản không tồn tại" });
-      } else {
-        const token = userUtils.createResetPasswordTokenWithId(data._id);
-        sendEmailUtils.sendResetPasswordEmail(data.displayName, data.email, token);
-        res.status(200).send({ message: "Gửi email lấy lại mật khẩu thành công" });
-      }
-    })
+    const data = await User.findOne({ email });
+    if (data) {
+      // update isAcitved
+      const token = await userUtils.createResetPasswordTokenWithId(data._id);
+      console.log("token: ", token);
+      sendEmailUtils.sendResetPasswordEmail(data.displayName, data.email, token);
+      res.status(200).send({ message: "Gửi email lấy lại mật khẩu thành công" });
+
+    } else {
+      return res.status(400).send({ message: "Tài khoản không tồn tại" });
+    }
   } catch (err) {
+    console.log("err: ", err);
     res.status(400).send({ message: "Có lỗi xảy ra" });
   }
 }
+
+/**
+ * body: {token}
+ * output: userId
+ */
+exports.verifyTokenResetPassword = async (req, res) => {
+  const { token } = req.body;
+  try {
+    const { userId } = await userUtils.decodeResetPasswordToken(token);
+    // console.log("user id: ", userId);
+    if (userId) {
+      const data = await User.findOne({ _id: userId });
+      if (data) {
+        return res.status(200).send({ message: "Mã xác nhận đúng", userId: data._id });
+      } else {
+        return res.status(400).send({ message: "Mã xác nhận không hợp lệ" });
+      }
+    } else {
+      return res.status(400).send({ message: "Mã xác nhận đã hết hạn hoặc không hợp lệ" });
+    }
+  } catch{
+    return res.status(400).send({ message: "Có lỗi xảy ra" });
+  }
+}
+
+/**
+ * body: {password, userId}
+ */
+exports.resetPassword = async (req, res) => {
+  const { password, userId } = req.body;
+  try {
+    user = await User.findOne({_id: userId});
+    console.log("user: ", user);
+    console.log("userid: ", userId);
+
+    if (user){
+      user.setpasswordHash(password);
+      user.password = password;
+      const result = user.save();
+      if (result){
+        return res.status(200).send({ message: "Lấy lại mật khẩu thành công" });
+      } else {
+        return res.status(400).send({ message: "Lấy lại mật khẩu thất bại" });
+      }
+    } else {
+      return res.status(400).send({ message: "Tài khoản không tồn tại" });
+    }
+  } catch{
+    return res.status(500).send({ message: "Có lỗi xảy ra" });
+  }
+}
+
 
 exports.test = (req, res) => {
   const { email } = req.body;

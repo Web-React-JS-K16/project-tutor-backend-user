@@ -61,5 +61,5 @@ exports.sendVerificationEmail = (name, to, token) => {
 exports.sendResetPasswordEmail = (name, to, token) => {
     const subject = "Lấy lại mật khẩu";
     const content = `Chào ${name}, mời bạn click vào link dưới đây để thay đổi mật khẩu: ${hostUrl}/reset-password/${token}/${to}`;
-    sendEmail(to, subject, contentEmail);
+    sendEmail(to, subject, content);
 };
