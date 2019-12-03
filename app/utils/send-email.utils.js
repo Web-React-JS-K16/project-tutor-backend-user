@@ -3,7 +3,9 @@ const sendGrid = require('sendgrid').mail;
 //TODO: setup env to save SendGridApiKey
 // const sg = require('sendgrid')(process.env.SendGridApiKey);
 const sg = require('sendgrid')('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');
-const hostUrl = 'http://localhost:3000';
+// const hostUrl = 'http://localhost:3000';
+const hostUrl = 'https://tutor-front-end-user.herokuapp.com/';
+
 
 
 const sendEmail = (to, subject, contentEmail) => {
