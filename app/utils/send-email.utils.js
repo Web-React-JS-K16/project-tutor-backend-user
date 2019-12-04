@@ -2,9 +2,9 @@ require('dotenv').config()
 const sendGrid = require('sendgrid').mail;
 //TODO: setup env to save SendGridApiKey
 // const sg = require('sendgrid')(process.env.SendGridApiKey);
-const sg = require('sendgrid')('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');
+const sg = require('sendgrid')('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');
 // const hostUrl = 'http://localhost:3000';
-const hostUrl = 'https://tutor-front-end-user.herokuapp.com/';
+const hostUrl = 'https://tutor-front-end-user.herokuapp.com';
 
 
 
@@ -55,6 +55,7 @@ exports.sendVerificationEmail = (name, to, token) => {
     const subject = "Kích hoạt tài khoản";
     const content = `Chào ${name}, mời bạn click vào link dưới đây để kích hoạt tài khoản: ${hostUrl}/active-email/${token}/${to}`;
     sendEmail(to, subject, content);
+    // console.log("after send email: ", content);
 };
 
 /**

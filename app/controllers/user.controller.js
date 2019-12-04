@@ -4,6 +4,10 @@ const jwt = require("jsonwebtoken");
 const jwtSecretConfig = require("../../config/jwt-secret.config");
 const userUtils = require("../utils/user.utils");
 const sendEmailUtils = require("../utils/send-email.utils");
+const bcrypt = require('bcryptjs');
+const saltRounds = 10;
+
+
 // Retrieving and return all users to the database
 exports.findAll = (req, res) => {
   User.find()
@@ -44,6 +48,7 @@ exports.register = (req, res) => {
       .then(data => {
         // send active email
         const token = userUtils.createActiveEmailTokenWithId(data._id);
+        // console.log("token ative: ", token);
         sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
         res.status(200).send({ user: data });
       })
@@ -258,11 +263,13 @@ exports.resetPassword = async (req, res) => {
     user = await User.findOne({_id: userId});
     console.log("user: ", user);
     console.log("userid: ", userId);
-
     if (user){
-      user.setpasswordHash(password);
-      user.password = password;
-      const result = user.save();
+      const newPassword = bcrypt.hashSync(password, saltRounds)
+      const result = await User.updateOne({ _id: userId }, { $set: { passwordHash: newPassword, password}})
+      
+      // user.setpasswordHash(password);
+      // user.password = password;
+      // const result = user.save();
       if (result){
         return res.status(200).send({ message: "Lấy lại mật khẩu thành công" });
       } else {
