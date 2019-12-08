@@ -1,9 +1,20 @@
-const User = require("../models/user.model");
-const passport = require("passport");
-const jwt = require("jsonwebtoken");
-const jwtSecretConfig = require("../../config/jwt-secret.config");
-const userUtils = require("../utils/user.utils");
-const sendEmailUtils = require("../utils/send-email.utils");
+const ObjectId = require('mongodb').ObjectID;
+const User = require('../models/user.model');
+const Teacher = require('../models/teacher.model');
+const Student = require('../models/student.model');
+const Tag = require('../models/tag.model');
+const Major = require('../models/major.model');
+const Comment = require('../models/comment.model');
+const Contract = require('../models/contract.model');
+const passport = require('passport');
+const jwt = require('jsonwebtoken');
+const jwtSecretConfig = require('../../config/jwt-secret.config');
+const userUtils = require('../utils/user.utils');
+const sendEmailUtils = require('../utils/send-email.utils');
+const userTypes = require('../enums/EUserTypes');
+const contractTypes = require('../enums/EContractTypes');
+const formatCostHelper = require('../helpers/format-cost.helper');
+
 // Retrieving and return all users to the database
 exports.findAll = (req, res) => {
   User.find()
@@ -11,8 +22,233 @@ exports.findAll = (req, res) => {
       res.send(users);
     })
     .catch(err => {
+      console.log('error: ', err.message);
       res.status(500).send({
-        message: 'Đã có lỗi xảy ra khi lấy danh sách người dùng.'
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      });
+    });
+};
+
+exports.getUserInfo = (req, res) => {
+  var userId = req.query.id || '';
+  User.findById({ _id: ObjectId(userId) })
+    .then(user => {
+      if (user) {
+        if (user.typeID === userTypes.TEACHER) {
+          Teacher.find({ userId: ObjectId(user._id) })
+            .then(teacherData => {
+              Contract.find({ teacherId: ObjectId(user._id) })
+                .then(async contractsData => {
+                  var contracts = [];
+                  for (data of contractsData) {
+                    // get comment of contract
+                    const commentData = await Comment.find({
+                      contractId: ObjectId(data._id)
+                    });
+
+                    // get contract
+                    const {
+                      name,
+                      status,
+                      isPaid,
+                      content,
+                      teacherId,
+                      studentId,
+                      startDate,
+                      endDate,
+                      costPerHour,
+                      workingHour
+                    } = data;
+                    let formatCostPerHour = formatCostHelper(
+                      costPerHour.toString() + '000'
+                    );
+                    let formatCost = formatCostHelper(
+                      (
+                        parseInt(costPerHour.toString()) * workingHour
+                      ).toString() + '000'
+                    );
+                    contracts.push({
+                      name,
+                      status,
+                      isPaid,
+                      content,
+                      teacherId,
+                      studentId,
+                      startDate,
+                      endDate,
+                      costPerHour: formatCostPerHour,
+                      cost: formatCost,
+                      workingHour,
+                      comment: commentData[0]
+                    });
+                  }
+
+                  // get user
+                  const {
+                    typeID,
+                    isBlock,
+                    isActive,
+                    email,
+                    displayName,
+                    avatar
+                  } = user;
+
+                  // get teacher
+                  const {
+                    _id,
+                    ciy,
+                    district,
+                    ward,
+                    salary,
+                    about,
+                    successRate,
+                    ratings,
+                    tags,
+                    jobs,
+                    hoursWorked,
+                    userId
+                  } = teacherData[0];
+
+                  res.status(200).send({
+                    user: {
+                      typeID,
+                      isBlock,
+                      isActive,
+                      email,
+                      displayName,
+                      avatar,
+                      _id,
+                      ciy,
+                      district,
+                      ward,
+                      salary,
+                      about,
+                      successRate,
+                      ratings,
+                      tags,
+                      jobs,
+                      hoursWorked,
+                      userId,
+                      contracts
+                    }
+                  });
+                })
+                .catch(err => {
+                  console.log('error: ', err.message);
+                  res.status(500).send({
+                    message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+                  });
+                });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              res.status(500).send({
+                message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+              });
+            });
+        } else {
+          Student.find({ userId: ObjectId(user._id) })
+            .then(studentData => {
+              Contract.find({ studentId: ObjectId(user._id) })
+                .then(async contractsData => {
+                  var contracts = [];
+                  for (data of contractsData) {
+                    // get comment of contract
+                    const commentData = await Comment.find({
+                      contractId: ObjectId(data._id)
+                    });
+
+                    // get contract
+                    const {
+                      name,
+                      status,
+                      isPaid,
+                      content,
+                      teacherId,
+                      studentId,
+                      startDate,
+                      endDate,
+                      costPerHour,
+                      workingHour
+                    } = data;
+                    let formatCostPerHour = formatCostHelper(
+                      costPerHour.toString() + '000'
+                    );
+                    let formatCost = formatCostHelper(
+                      (
+                        parseInt(costPerHour.toString()) * workingHour
+                      ).toString() + '000'
+                    );
+                    contracts.push({
+                      name,
+                      status,
+                      isPaid,
+                      content,
+                      teacherId,
+                      studentId,
+                      startDate,
+                      endDate,
+                      costPerHour: formatCostPerHour,
+                      cost: formatCost,
+                      workingHour,
+                      comment: commentData[0]
+                    });
+                  }
+
+                  // get user
+                  const {
+                    typeID,
+                    isBlock,
+                    isActive,
+                    email,
+                    displayName,
+                    avatar
+                  } = user;
+
+                  // get student
+                  const { _id, ciy, district, ward, userId } = studentData[0];
+
+                  res.status(200).send({
+                    user: {
+                      typeID,
+                      isBlock,
+                      isActive,
+                      email,
+                      displayName,
+                      avatar,
+                      _id,
+                      ciy,
+                      district,
+                      ward,
+                      userId,
+                      contracts
+                    }
+                  });
+                })
+                .catch(err => {
+                  console.log('error: ', err.message);
+                  res.status(500).send({
+                    message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+                  });
+                });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              res.status(500).send({
+                message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+              });
+            });
+        }
+      } else {
+        res.status(400).send({
+          message: 'Người dùng chưa đăng kí tài khoản.'
+        });
+      }
+    })
+    .catch(err => {
+      console.log('error: ', err.message);
+      res.status(500).send({
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
       });
     });
 };
@@ -34,21 +270,54 @@ exports.register = (req, res) => {
         .status(400)
         .send({ message: 'Email đã tồn tại, vui lòng nhập email khác.' });
     }
+
     const user = new User(req.body);
     user.setPasswordHash(req.body.password);
-    var avatar =
-      'https://cdn.pixabay.com/photo/2016/11/18/23/38/child-1837375_960_720.png';
-    user.setAvatar(avatar);
+    user.avatar(
+      'https://cdn.pixabay.com/photo/2016/11/18/23/38/child-1837375_960_720.png'
+    );
     user
       .save()
-      .then(data => {
+      .then(userData => {
         // send active email
-        const token = userUtils.createActiveEmailTokenWithId(data._id);
-        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
-        res.status(200).send({ user: data });
+        const token = userUtils.createActiveEmailTokenWithId(userData._id);
+        sendEmailUtils.sendVerificationEmail(
+          userData.displayName,
+          userData.email,
+          token
+        );
+        if (userData.typeID === userTypes.TEACHER) {
+          const teacher = new Teacher();
+          teacher.setUserId(userData._id);
+          teacher
+            .save()
+            .then(teacherData => {
+              res.status(200).send({ user: userData });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              return res
+                .status(500)
+                .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
+            });
+        } else {
+          const student = new Student();
+          student.setUserId(userData._id);
+          student
+            .save()
+            .then(studentData => {
+              res.status(200).send({ user: userData });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              return res
+                .status(500)
+                .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
+            });
+        }
       })
       .catch(err => {
-        console.log('error: ', err);
+        console.log('error: ', err.message);
         return res
           .status(500)
           .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
@@ -76,7 +345,7 @@ exports.login = (req, res) => {
       if (err) {
         return res.status(400).json({
           status: false,
-          message: 'Xảy ra lỗi'
+          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
         });
       }
       // generate a signed son web token with the contents of user object and return it in the response
@@ -107,46 +376,76 @@ exports.authenWithSocial = (req, res) => {
     if (!data) {
       // create new user
       const user = new User(req.body);
-      user.save()
-        .catch((err) => {
-          console.log("error: ", err);
+      user
+        .save()
+        .then(userData => {
+          if (userData.typeID === userTypes.TEACHER) {
+            const teacher = new Teacher();
+            teacher.setUserId(userData._id);
+            teacher.save().catch(err => {
+              console.log('error: ', err.message);
+              return res
+                .status(500)
+                .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
+            });
+          } else {
+            const student = new Student();
+            student.setUserId(userData._id);
+            student.save().catch(err => {
+              console.log('error: ', err.message);
+              return res
+                .status(500)
+                .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
+            });
+          }
+        })
+        .catch(err => {
+          console.log('error: ', err.message);
           return res
             .status(500)
-            .send({ message: "Đã có lỗi xảy ra, vui lòng thử lại" });
+            .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
         });
     } else if (data) {
       // check typeId
       if (data.typeID !== typeID) {
-        return res
-          .status(400)
-          .send({ message: 'Tài khoản không hợp lệ' });
+        return res.status(400).send({ message: 'Tài khoản không hợp lệ' });
       }
-      if (data.facebookID !== facebookID) { // update facebookID
-        User.updateOne({ email }, { $set: { "facebookID": facebookID } }, (err, rs) => {
-          //  console.log("after update:", rs);
-        });
+      if (data.facebookID !== facebookID) {
+        // update facebookID
+        User.updateOne(
+          { email },
+          { $set: { facebookID: facebookID } },
+          (err, rs) => {
+            //  console.log("after update:", rs);
+          }
+        );
       }
 
-      if (data.googleID !== googleID) { // update googleID
-        console.log("on update googleid: ");
-        User.updateOne({ email }, { $set: { "googleID": googleID } }, (err, rs) => {
-          //  console.log("after update:", rs);
-        });
+      if (data.googleID !== googleID) {
+        // update googleID
+        console.log('on update googleid: ');
+        User.updateOne(
+          { email },
+          { $set: { googleID: googleID } },
+          (err, rs) => {
+            //  console.log("after update:", rs);
+          }
+        );
       }
     }
 
     const token = userUtils.createUserToken(req.body);
+    const { displayName, avatar, _id } = data;
 
     return res
       .status(200)
-      .send({ user: { ...req.body, token } });
-
-  }).catch((err) => {
-    console.log("catch err: ", err);
+      .send({ user: { ...req.body, token, displayName, avatar, _id } });
+  }).catch(err => {
+    console.log('error: ', err.message);
     return res
       .status(500)
-      .send({ message: err.message });
-  })
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+  });
 };
 
 /**
@@ -161,26 +460,36 @@ exports.activeEmail = async (req, res) => {
       const data = await User.findOne({ _id: userId });
       if (data) {
         if (data.isAcitved) {
-          return res.status(400).send({ message: "Tài khoản đã được kích hoạt" });
+          return res
+            .status(400)
+            .send({ message: 'Tài khoản đã được kích hoạt' });
         }
         // update isAcitved
-        const result = await User.updateOne({ _id: userId }, { $set: { "isActived": true } });
+        const result = await User.updateOne(
+          { _id: userId },
+          { $set: { isActived: true } }
+        );
         if (result) {
-          return res.status(200).send({ message: "Kích hoạt tài khoản thành công" });
+          return res
+            .status(200)
+            .send({ message: 'Kích hoạt tài khoản thành công' });
         } else {
-          return res.status(400).send({ message: "Kích hoạt tài khoản thất bại" });
+          return res
+            .status(400)
+            .send({ message: 'Kích hoạt tài khoản thất bại' });
         }
-
       } else {
-        return res.status(400).send({ message: "Tài khoản không tồn tại" });
+        return res.status(400).send({ message: 'Tài khoản không tồn tại' });
       }
     } else {
-      return res.status(400).send({ message: "Link đã hết hạn hoặc không hợp lệ" });
+      return res
+        .status(400)
+        .send({ message: 'Link đã hết hạn hoặc không hợp lệ' });
     }
   } catch {
-    return res.status(400).send({ message: "Có lỗi xảy ra" });
+    return res.status(400).send({ message: 'Có lỗi xảy ra' });
   }
-}
+};
 
 /**
  * body: {email}
@@ -190,17 +499,21 @@ exports.resendActiveEmail = (req, res) => {
   try {
     User.findOne({ email }, (err, data) => {
       if (!data) {
-        res.status(400).send({ message: "Tài khoản không tồn tại" });
+        res.status(400).send({ message: 'Tài khoản không tồn tại' });
       } else {
         const token = userUtils.createActiveEmailTokenWithId(data._id);
-        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
-        res.status(200).send({ message: "Gửi lại email thành công" });
+        sendEmailUtils.sendVerificationEmail(
+          data.displayName,
+          data.email,
+          token
+        );
+        res.status(200).send({ message: 'Gửi lại email thành công' });
       }
-    })
+    });
   } catch (err) {
-    res.status(400).send({ message: "Có lỗi xảy ra" });
+    res.status(400).send({ message: 'Có lỗi xảy ra' });
   }
-}
+};
 
 /**
  * body: {email}
@@ -212,18 +525,23 @@ exports.sendMailResetPassword = async (req, res) => {
     if (data) {
       // update isAcitved
       const token = await userUtils.createResetPasswordTokenWithId(data._id);
-      console.log("token: ", token);
-      sendEmailUtils.sendResetPasswordEmail(data.displayName, data.email, token);
-      res.status(200).send({ message: "Gửi email lấy lại mật khẩu thành công" });
-
+      console.log('token: ', token);
+      sendEmailUtils.sendResetPasswordEmail(
+        data.displayName,
+        data.email,
+        token
+      );
+      res
+        .status(200)
+        .send({ message: 'Gửi email lấy lại mật khẩu thành công' });
     } else {
-      return res.status(400).send({ message: "Tài khoản không tồn tại" });
+      return res.status(400).send({ message: 'Tài khoản không tồn tại' });
     }
   } catch (err) {
-    console.log("err: ", err);
-    res.status(400).send({ message: "Có lỗi xảy ra" });
+    console.log('err: ', err);
+    res.status(400).send({ message: 'Có lỗi xảy ra' });
   }
-}
+};
 
 /**
  * body: {token}
@@ -237,17 +555,21 @@ exports.verifyTokenResetPassword = async (req, res) => {
     if (userId) {
       const data = await User.findOne({ _id: userId });
       if (data) {
-        return res.status(200).send({ message: "Mã xác nhận đúng", userId: data._id });
+        return res
+          .status(200)
+          .send({ message: 'Mã xác nhận đúng', userId: data._id });
       } else {
-        return res.status(400).send({ message: "Mã xác nhận không hợp lệ" });
+        return res.status(400).send({ message: 'Mã xác nhận không hợp lệ' });
       }
     } else {
-      return res.status(400).send({ message: "Mã xác nhận đã hết hạn hoặc không hợp lệ" });
+      return res
+        .status(400)
+        .send({ message: 'Mã xác nhận đã hết hạn hoặc không hợp lệ' });
     }
-  } catch{
-    return res.status(400).send({ message: "Có lỗi xảy ra" });
+  } catch {
+    return res.status(400).send({ message: 'Có lỗi xảy ra' });
   }
-}
+};
 
 /**
  * body: {password, userId}
@@ -255,42 +577,47 @@ exports.verifyTokenResetPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   const { password, userId } = req.body;
   try {
-    user = await User.findOne({_id: userId});
-    console.log("user: ", user);
-    console.log("userid: ", userId);
+    user = await User.findOne({ _id: userId });
+    console.log('user: ', user);
+    console.log('userid: ', userId);
 
-    if (user){
+    if (user) {
       user.setpasswordHash(password);
       user.password = password;
       const result = user.save();
-      if (result){
-        return res.status(200).send({ message: "Lấy lại mật khẩu thành công" });
+      if (result) {
+        return res.status(200).send({ message: 'Lấy lại mật khẩu thành công' });
       } else {
-        return res.status(400).send({ message: "Lấy lại mật khẩu thất bại" });
+        return res.status(400).send({ message: 'Lấy lại mật khẩu thất bại' });
       }
     } else {
-      return res.status(400).send({ message: "Tài khoản không tồn tại" });
+      return res.status(400).send({ message: 'Tài khoản không tồn tại' });
     }
-  } catch{
-    return res.status(500).send({ message: "Có lỗi xảy ra" });
+  } catch {
+    return res
+      .status(500)
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
   }
-}
-
+};
 
 exports.test = (req, res) => {
   const { email } = req.body;
-  console.log("email: ", email);
+  console.log('email: ', email);
   try {
     User.findOne({ email }, (err, data) => {
       if (!data) {
-        res.status(400).send({ message: "Tài khoản không tồn tại" });
+        res.status(400).send({ message: 'Tài khoản không tồn tại' });
       } else {
         const token = userUtils.createActiveEmailTokenWithId(data._id);
-        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
-        res.status(200).send({ message: "Gửi email  thành công" });
+        sendEmailUtils.sendVerificationEmail(
+          data.displayName,
+          data.email,
+          token
+        );
+        res.status(200).send({ message: 'Gửi email  thành công' });
       }
-    })
+    });
   } catch (err) {
-    res.status(400).send({ message: "Có lỗi xảy ra" });
+    res.status(400).send({ message: 'Có lỗi xảy ra' });
   }
-}
+};
