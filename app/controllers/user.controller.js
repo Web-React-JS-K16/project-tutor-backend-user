@@ -16,10 +16,147 @@ const contractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
 
 // Retrieving and return all users to the database
-exports.findAll = (req, res) => {
-  User.find()
-    .then(users => {
-      res.send(users);
+exports.getUserList = (req, res) => {
+  var typeId = req.query.type || userTypes.TEACHER;
+  var pageNumber = req.query.page || 1;
+  var itemPerPage = req.query.limit || 1;
+
+  if (isNaN(typeId) || typeId < 0) {
+    typeId = userTypes.TEACHER;
+  } else {
+    typeId = parseInt(typeId);
+  }
+  if (isNaN(pageNumber) || pageNumber < 1) {
+    pageNumber = 1;
+  } else {
+    pageNumber = parseInt(pageNumber);
+  }
+  if (isNaN(itemPerPage) || itemPerPage < 1) {
+    itemPerPage = 1;
+  } else {
+    itemPerPage = parseInt(itemPerPage);
+  }
+
+  User.find({ typeID: typeId })
+    .skip(itemPerPage * (pageNumber - 1))
+    .limit(itemPerPage)
+    .then(async users => {
+      if (typeId === userTypes.TEACHER) {
+        var teacherList = [];
+        for (user of users) {
+          const teacherData = await Teacher.find({
+            userId: ObjectId(user._id)
+          });
+
+          // get user
+          const {
+            typeID,
+            isBlock,
+            isActive,
+            email,
+            displayName,
+            avatar
+          } = user;
+
+          // get teacher
+          const {
+            _id,
+            ciy,
+            district,
+            ward,
+            salary,
+            about,
+            successRate,
+            ratings,
+            tags,
+            jobs,
+            hoursWorked,
+            userId
+          } = teacherData[0];
+
+          teacherList.push({
+            typeID,
+            isBlock,
+            isActive,
+            email,
+            displayName,
+            avatar,
+            teacherId: _id,
+            ciy,
+            district,
+            ward,
+            salary,
+            about,
+            successRate,
+            ratings,
+            tags,
+            jobs,
+            hoursWorked,
+            _id: userId
+          });
+        }
+        res.status(200).send({
+          user: teacherList
+        });
+      } else {
+        var studentList = [];
+        for (user of users) {
+          const studentData = await Student.find({
+            userId: ObjectId(user._id)
+          });
+
+          // get user
+          const {
+            typeID,
+            isBlock,
+            isActive,
+            email,
+            displayName,
+            avatar
+          } = user;
+
+          // get student
+          const { _id, ciy, district, ward, userId } = studentData[0];
+
+          studentList.push({
+            typeID,
+            isBlock,
+            isActive,
+            email,
+            displayName,
+            avatar,
+            studentId: _id,
+            ciy,
+            district,
+            ward,
+            _id: userId
+          });
+        }
+        res.status(200).send({
+          user: studentList
+        });
+      }
+    })
+    .catch(err => {
+      console.log('error: ', err.message);
+      res.status(500).send({
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      });
+    });
+};
+
+exports.countUsers = (req, res) => {
+  var typeId = req.query.type || userTypes.TEACHER;
+
+  if (isNaN(typeId) || typeId < 0) {
+    typeId = userTypes.TEACHER;
+  } else {
+    typeId = parseInt(typeId);
+  }
+
+  User.countDocuments({ typeID: typeId })
+    .then(number => {
+      res.status(200).send({ user: number });
     })
     .catch(err => {
       console.log('error: ', err.message);
@@ -117,7 +254,7 @@ exports.getUserInfo = (req, res) => {
                       email,
                       displayName,
                       avatar,
-                      _id,
+                      teacherId: _id,
                       ciy,
                       district,
                       ward,
@@ -128,7 +265,7 @@ exports.getUserInfo = (req, res) => {
                       tags,
                       jobs,
                       hoursWorked,
-                      userId,
+                      _id: userId,
                       contracts
                     }
                   });
@@ -216,11 +353,11 @@ exports.getUserInfo = (req, res) => {
                       email,
                       displayName,
                       avatar,
-                      _id,
+                      studentId: _id,
                       ciy,
                       district,
                       ward,
-                      userId,
+                      _id: userId,
                       contracts
                     }
                   });
@@ -273,9 +410,8 @@ exports.register = (req, res) => {
 
     const user = new User(req.body);
     user.setPasswordHash(req.body.password);
-    user.avatar(
-      'https://cdn.pixabay.com/photo/2016/11/18/23/38/child-1837375_960_720.png'
-    );
+    user.avatar =
+      'https://cdn.pixabay.com/photo/2016/11/18/23/38/child-1837375_960_720.png';
     user
       .save()
       .then(userData => {
@@ -288,7 +424,7 @@ exports.register = (req, res) => {
         );
         if (userData.typeID === userTypes.TEACHER) {
           const teacher = new Teacher();
-          teacher.setUserId(userData._id);
+          teacher.userId = userData._id;
           teacher
             .save()
             .then(teacherData => {
@@ -302,7 +438,7 @@ exports.register = (req, res) => {
             });
         } else {
           const student = new Student();
-          student.setUserId(userData._id);
+          student.userId = userData._id;
           student
             .save()
             .then(studentData => {
@@ -381,7 +517,7 @@ exports.authenWithSocial = (req, res) => {
         .then(userData => {
           if (userData.typeID === userTypes.TEACHER) {
             const teacher = new Teacher();
-            teacher.setUserId(userData._id);
+            teacher.userId = userData._id;
             teacher.save().catch(err => {
               console.log('error: ', err.message);
               return res
@@ -390,7 +526,7 @@ exports.authenWithSocial = (req, res) => {
             });
           } else {
             const student = new Student();
-            student.setUserId(userData._id);
+            student.userId = userData._id;
             student.save().catch(err => {
               console.log('error: ', err.message);
               return res
@@ -398,6 +534,11 @@ exports.authenWithSocial = (req, res) => {
                 .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
             });
           }
+
+          const token = userUtils.createUserToken(req.body);
+          const { _id } = userData;
+
+          return res.status(200).send({ user: { ...req.body, token, _id } });
         })
         .catch(err => {
           console.log('error: ', err.message);
@@ -432,14 +573,12 @@ exports.authenWithSocial = (req, res) => {
           }
         );
       }
+
+      const token = userUtils.createUserToken(req.body);
+      const { _id } = data;
+
+      return res.status(200).send({ user: { ...req.body, token, _id } });
     }
-
-    const token = userUtils.createUserToken(req.body);
-    const { displayName, avatar, _id } = data;
-
-    return res
-      .status(200)
-      .send({ user: { ...req.body, token, displayName, avatar, _id } });
   }).catch(err => {
     console.log('error: ', err.message);
     return res

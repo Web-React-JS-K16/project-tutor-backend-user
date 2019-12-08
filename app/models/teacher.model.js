@@ -34,12 +34,4 @@ const TeacherSchema = mongoose.Schema(
   }
 );
 
-TeacherSchema.methods.setUserId = function(userId) {
-  this.userId = userId;
-};
-
-TeacherSchema.methods.setTags = function(tags) {
-  this.tags = tags;
-};
-
 module.exports = mongoose.model('Teacher', TeacherSchema);
