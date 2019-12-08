@@ -15,8 +15,4 @@ const StudentSchema = mongoose.Schema(
   }
 );
 
-StudentSchema.methods.setUserId = function(userId) {
-  this.userId = userId;
-};
-
 module.exports = mongoose.model('Student', StudentSchema);

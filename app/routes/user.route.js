@@ -4,7 +4,7 @@ const passport = require('passport');
 const userController = require('../controllers/user.controller');
 
 // Retrieve all user
-app.get('/user', userController.findAll);
+app.get('/user', userController.getUserList);
 app.get(
   '/user/authenticate',
   passport.authenticate('jwt', { session: false }),
@@ -15,6 +15,7 @@ app.get(
 app.post('/user/register', userController.register);
 app.post('/user/login', userController.login); //login with email and password
 app.get('/user/info', userController.getUserInfo);
+app.get('/user/quantity', userController.countUsers);
 
 /**
  * Login with fb/gg
