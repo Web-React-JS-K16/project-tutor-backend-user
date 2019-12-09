@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const ObjectId = require('mongodb').ObjectID;
 const User = require('../models/user.model');
 const Teacher = require('../models/teacher.model');
@@ -14,6 +15,17 @@ const sendEmailUtils = require('../utils/send-email.utils');
 const userTypes = require('../enums/EUserTypes');
 const contractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
+=======
+const User = require("../models/user.model");
+const passport = require("passport");
+const jwt = require("jsonwebtoken");
+const jwtSecretConfig = require("../../config/jwt-secret.config");
+const userUtils = require("../utils/user.utils");
+const sendEmailUtils = require("../utils/send-email.utils");
+const bcrypt = require('bcryptjs');
+const saltRounds = 10;
+
+>>>>>>> 1d27a61669ad1810e7e782266ad4d9e2c241582e
 
 // Retrieving and return all users to the database
 exports.getUserList = (req, res) => {
@@ -416,6 +428,7 @@ exports.register = (req, res) => {
       .save()
       .then(userData => {
         // send active email
+<<<<<<< HEAD
         const token = userUtils.createActiveEmailTokenWithId(userData._id);
         sendEmailUtils.sendVerificationEmail(
           userData.displayName,
@@ -451,6 +464,12 @@ exports.register = (req, res) => {
                 .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
             });
         }
+=======
+        const token = userUtils.createActiveEmailTokenWithId(data._id);
+        // console.log("token ative: ", token);
+        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
+        res.status(200).send({ user: data });
+>>>>>>> 1d27a61669ad1810e7e782266ad4d9e2c241582e
       })
       .catch(err => {
         console.log('error: ', err.message);
@@ -716,16 +735,18 @@ exports.verifyTokenResetPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   const { password, userId } = req.body;
   try {
-    user = await User.findOne({ _id: userId });
-    console.log('user: ', user);
-    console.log('userid: ', userId);
-
-    if (user) {
-      user.setpasswordHash(password);
-      user.password = password;
-      const result = user.save();
-      if (result) {
-        return res.status(200).send({ message: 'Lấy lại mật khẩu thành công' });
+    user = await User.findOne({_id: userId});
+    console.log("user: ", user);
+    console.log("userid: ", userId);
+    if (user){
+      const newPassword = bcrypt.hashSync(password, saltRounds)
+      const result = await User.updateOne({ _id: userId }, { $set: { passwordHash: newPassword, password}})
+      
+      // user.setpasswordHash(password);
+      // user.password = password;
+      // const result = user.save();
+      if (result){
+        return res.status(200).send({ message: "Lấy lại mật khẩu thành công" });
       } else {
         return res.status(400).send({ message: 'Lấy lại mật khẩu thất bại' });
       }
