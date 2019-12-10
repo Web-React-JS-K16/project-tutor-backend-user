@@ -58,16 +58,20 @@ app.post('/user/change-password',
 app.post('/user/update-avatar',
   passport.authenticate('jwt', { session: false }),
   userController.updateAvatar);
+
+// ======STUDENT======
+app.get('/student/get-info', passport.authenticate('jwt',{ session: false }), 
+  userUtils.checkRole(EUserType.STUDENT),
+  userController.getInfoStudent);
+
 // student update info
-app.post('/user/student/update-info',
- passport.authenticate('jwt', { session: false }), 
+app.post('/student/update-info',
+  passport.authenticate('jwt', { session: false }),
   userUtils.checkRole(EUserType.STUDENT),
   userController.updateInfoStudent);
-// teacher update info
-// app.post('/user/teacher/update-info',
-//   passport.authenticate('jwt', { session: false }),
-//   userUtils.checkRole(EUserType.TEACHER),
-//   userController.updateInfoTeacher);
+
+
+
 
 
 module.exports = app;

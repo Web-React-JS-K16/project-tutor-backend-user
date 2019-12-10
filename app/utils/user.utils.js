@@ -46,7 +46,8 @@ exports.decodeResetPasswordToken = async token => {
 
 //=============
 exports.checkRole = (role) => (req, res, next) =>{
-    if (!req.user || req.user.role !== role){
+    console.log("role: ", role, " ==", req.user.typeID)
+    if (!req.user || req.user.typeID !== role){
         return res.redirect(`${constant.frontendUrl}/student/login`)
     }
 
