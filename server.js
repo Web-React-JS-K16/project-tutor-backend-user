@@ -7,6 +7,7 @@ const userRouter = require('./app/routes/user.route');
 const tagRouter = require('./app/routes/tag.route');
 const teacherRouter = require('./app/routes/teacher.route');
 const studentRouter = require('./app/routes/student.route');
+const majorRouter = require('./app/routes/major.route');
 
 const cors = require('cors');
 require('./passport');
@@ -49,6 +50,7 @@ app.get('/user', userRouter);
 app.get('/tag', tagRouter);
 app.get('/teacher', teacherRouter);
 app.get('/student', studentRouter);
+app.get('/major', majorRouter);
 
 app.listen(parseInt(process.env.PORT) || 4500, () => {
   console.log('Server is listening on port 4500');
