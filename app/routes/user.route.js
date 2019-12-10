@@ -2,6 +2,9 @@ const express = require('express');
 const app = express();
 const passport = require('passport');
 const userController = require('../controllers/user.controller');
+const userUtils = require('../utils/user.utils');
+const EUserType = require('../enums/EUserTypes');
+
 
 // Retrieve all user
 app.get('/user', userController.getUserList);
@@ -48,6 +51,12 @@ app.post(
   userController.verifyTokenResetPassword
 );
 app.post('/user/reset-password', userController.resetPassword);
-// app.get("/test", userController.test);
+app.post('/user/change-password', 
+  passport.authenticate('jwt', { session: false }), 
+  userController.changePassword);
+// student update info
+app.post('/user/update-avatar',
+  passport.authenticate('jwt', { session: false }),
+  userController.updateAvatar);
 
 module.exports = app;
