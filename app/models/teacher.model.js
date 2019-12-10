@@ -5,18 +5,18 @@ const TeacherSchema = mongoose.Schema(
     city: String,
     district: String,
     ward: String,
-    salary: { type: Number, default: 0 },
+    salary: { type: mongoose.Schema.Types.Decimal128, default: 0 },
     about: String,
     successRate: { type: Number, default: 0 },
     ratings: { type: Number, default: 0 },
     tags: [
       {
-        tagId: {
+        _id: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Tag'
         },
         name: String,
-        major: {
+        majorId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Major'
         }

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const MajorSchema = mongoose.Schema(
+const CitySchema = mongoose.Schema(
   {
     name: String
   },
@@ -9,4 +9,4 @@ const MajorSchema = mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Major', MajorSchema);
+module.exports = mongoose.model('City', CitySchema);

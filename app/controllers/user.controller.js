@@ -11,42 +11,72 @@ const jwt = require('jsonwebtoken');
 const jwtSecretConfig = require('../../config/jwt-secret.config');
 const userUtils = require('../utils/user.utils');
 const sendEmailUtils = require('../utils/send-email.utils');
-const userTypes = require('../enums/EUserTypes');
-const contractTypes = require('../enums/EContractTypes');
+const UserTypes = require('../enums/EUserTypes');
+const ContractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
+const DefaultValues = require('../utils/default-values.utils');
 
 // Retrieving and return all users to the database
 exports.getUserList = (req, res) => {
-  var typeId = req.query.type || userTypes.TEACHER;
-  var pageNumber = req.query.page || 1;
-  var itemPerPage = req.query.limit || 1;
+  var typeId = req.query.type || DefaultValues.typeId;
+  var pageNumber = req.query.page || DefaultValues.pageNumber;
+  var itemPerPage = req.query.limit || DefaultValues.itemPerPage;
+  var fromSalary = req.query.fromSalary || DefaultValues.fromSalary;
+  var toSalary = req.query.toSalary || DefaultValues.toSalary;
+  var majors = req.query.majors || DefaultValues.majors;
+  var city = req.query.city || DefaultValues.city;
+  var district = req.query.district || DefaultValues.district;
+  var ward = req.query.ward || DefaultValues.ward;
 
   if (isNaN(typeId) || typeId < 0) {
-    typeId = userTypes.TEACHER;
+    typeId = DefaultValues.typeId;
   } else {
     typeId = parseInt(typeId);
   }
   if (isNaN(pageNumber) || pageNumber < 1) {
-    pageNumber = 1;
+    pageNumber = DefaultValues.pageNumber;
   } else {
     pageNumber = parseInt(pageNumber);
   }
   if (isNaN(itemPerPage) || itemPerPage < 1) {
-    itemPerPage = 1;
+    itemPerPage = DefaultValues.itemPerPage;
   } else {
     itemPerPage = parseInt(itemPerPage);
   }
+  if (isNaN(fromSalary) || fromSalary < 0) {
+    fromSalary = DefaultValues.fromSalary;
+  } else {
+    fromSalary = parseFloat(fromSalary);
+  }
+  if (isNaN(toSalary) || toSalary < 0) {
+    toSalary = DefaultValues.toSalary;
+  } else {
+    toSalary = parseFloat(toSalary);
+  }
+  if (majors.length === 0) {
+    Major.find().then(majorList => {
+      majors = majorList.map(major => {
+        return ObjectId(major._id);
+      });
+    });
+  } else {
+    majors = majors.map(majorId => {
+      return ObjectId(majorId);
+    });
+  }
 
-  User.find({ typeID: typeId })
-    .skip(itemPerPage * (pageNumber - 1))
-    .limit(itemPerPage)
-    .then(async users => {
-      if (typeId === userTypes.TEACHER) {
+  if (typeId === UserTypes.TEACHER) {
+    Teacher.find({
+      salary: { $gte: fromSalary, $lte: toSalary },
+      'tags.majorId': { $in: [ObjectId('5ded138c8b7eb08d3c3a27d1')] }
+    })
+      .skip(itemPerPage * (pageNumber - 1))
+      .limit(itemPerPage)
+      .then(async teachers => {
         var teacherList = [];
-        for (user of users) {
-          const teacherData = await Teacher.find({
-            userId: ObjectId(user._id)
-          });
+
+        for (teacher of teachers) {
+          const user = await User.find({ _id: ObjectId(teacher.userId) });
 
           // get user
           const {
@@ -56,7 +86,7 @@ exports.getUserList = (req, res) => {
             email,
             displayName,
             avatar
-          } = user;
+          } = user[0];
 
           // get teacher
           const {
@@ -72,8 +102,9 @@ exports.getUserList = (req, res) => {
             jobs,
             hoursWorked,
             userId
-          } = teacherData[0];
+          } = teacher;
 
+          let formatSalary = formatCostHelper(salary.toString() + '000');
           teacherList.push({
             typeID,
             isBlock,
@@ -85,7 +116,7 @@ exports.getUserList = (req, res) => {
             ciy,
             district,
             ward,
-            salary,
+            salary: formatSalary,
             about,
             successRate,
             ratings,
@@ -95,15 +126,26 @@ exports.getUserList = (req, res) => {
             _id: userId
           });
         }
+
         res.status(200).send({
           user: teacherList
         });
-      } else {
+      })
+      .catch(err => {
+        console.log('error: ', err.message);
+        res.status(500).send({
+          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+        });
+      });
+  } else if (typeId === UserTypes.STUDENT) {
+    Student.find()
+      .skip(itemPerPage * (pageNumber - 1))
+      .limit(itemPerPage)
+      .then(async students => {
         var studentList = [];
-        for (user of users) {
-          const studentData = await Student.find({
-            userId: ObjectId(user._id)
-          });
+
+        for (student of students) {
+          const user = await User.find({ _id: ObjectId(student.userId) });
 
           // get user
           const {
@@ -113,10 +155,10 @@ exports.getUserList = (req, res) => {
             email,
             displayName,
             avatar
-          } = user;
+          } = user[0];
 
           // get student
-          const { _id, ciy, district, ward, userId } = studentData[0];
+          const { _id, city, district, ward, userId } = student;
 
           studentList.push({
             typeID,
@@ -132,38 +174,82 @@ exports.getUserList = (req, res) => {
             _id: userId
           });
         }
+
         res.status(200).send({
           user: studentList
         });
-      }
-    })
-    .catch(err => {
-      console.log('error: ', err.message);
-      res.status(500).send({
-        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      })
+      .catch(err => {
+        console.log('error: ', err.message);
+        res.status(500).send({
+          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+        });
       });
-    });
+  }
 };
 
 exports.countUsers = (req, res) => {
-  var typeId = req.query.type || userTypes.TEACHER;
+  var typeId = req.query.type || DefaultValues.typeId;
+  var fromSalary = req.query.fromSalary || DefaultValues.fromSalary;
+  var toSalary = req.query.toSalary || DefaultValues.toSalary;
+  var majors = req.query.majors || DefaultValues.majors;
+  var city = req.query.city || DefaultValues.city;
+  var district = req.query.district || DefaultValues.district;
+  var ward = req.query.ward || DefaultValues.ward;
 
   if (isNaN(typeId) || typeId < 0) {
-    typeId = userTypes.TEACHER;
+    typeId = DefaultValues.typeId;
   } else {
     typeId = parseInt(typeId);
   }
-
-  User.countDocuments({ typeID: typeId })
-    .then(number => {
-      res.status(200).send({ user: number });
-    })
-    .catch(err => {
-      console.log('error: ', err.message);
-      res.status(500).send({
-        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+  if (isNaN(fromSalary) || fromSalary < 0) {
+    fromSalary = DefaultValues.fromSalary;
+  } else {
+    fromSalary = parseFloat(fromSalary);
+  }
+  if (isNaN(toSalary) || toSalary < 0) {
+    toSalary = DefaultValues.toSalary;
+  } else {
+    toSalary = parseFloat(toSalary);
+  }
+  if (majors.length === 0) {
+    Major.find().then(majorList => {
+      majors = majorList.map(major => {
+        return ObjectId(major._id);
       });
     });
+  } else {
+    majors = majors.map(majorId => {
+      return ObjectId(majorId);
+    });
+  }
+
+  if (typeId === UserTypes.TEACHER) {
+    Teacher.countDocuments({
+      salary: { $gte: fromSalary, $lte: toSalary },
+      'tags.majorId': { $in: [ObjectId('5ded138c8b7eb08d3c3a27d1')] }
+    })
+      .then(quantity => {
+        res.status(200).send({ user: quantity });
+      })
+      .catch(err => {
+        console.log('error: ', err.message);
+        res.status(500).send({
+          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+        });
+      });
+  } else if (typeId === UserTypes.STUDENT) {
+    Student.countDocuments()
+      .then(quantity => {
+        res.status(200).send({ user: quantity });
+      })
+      .catch(err => {
+        console.log('error: ', err.message);
+        res.status(500).send({
+          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+        });
+      });
+  }
 };
 
 exports.getUserInfo = (req, res) => {
@@ -171,7 +257,7 @@ exports.getUserInfo = (req, res) => {
   User.findById({ _id: ObjectId(userId) })
     .then(user => {
       if (user) {
-        if (user.typeID === userTypes.TEACHER) {
+        if (user.typeID === UserTypes.TEACHER) {
           Teacher.find({ userId: ObjectId(user._id) })
             .then(teacherData => {
               Contract.find({ teacherId: ObjectId(user._id) })
@@ -422,7 +508,7 @@ exports.register = (req, res) => {
           userData.email,
           token
         );
-        if (userData.typeID === userTypes.TEACHER) {
+        if (userData.typeID === UserTypes.TEACHER) {
           const teacher = new Teacher();
           teacher.userId = userData._id;
           teacher
@@ -515,7 +601,7 @@ exports.authenWithSocial = (req, res) => {
       user
         .save()
         .then(userData => {
-          if (userData.typeID === userTypes.TEACHER) {
+          if (userData.typeID === UserTypes.TEACHER) {
             const teacher = new Teacher();
             teacher.userId = userData._id;
             teacher.save().catch(err => {

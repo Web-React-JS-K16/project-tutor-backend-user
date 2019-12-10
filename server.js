@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const logger = require('morgan');
 const dbConfig = require('./config/database.config');
 const userRouter = require('./app/routes/user.route');
+const majorRouter = require('./app/routes/major.route');
 
 const cors = require('cors');
 require('./passport');
@@ -40,6 +41,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/user', userRouter);
+app.get('/major', majorRouter);
 
 app.listen(parseInt(process.env.PORT) || 4500, () => {
   console.log('Server is listening on port 4500');
