@@ -9,10 +9,17 @@ exports.getLocationList = (req, res) => {
       const locationList = [];
       for (city of cities) {
         var city = { _id: city._id, name: city.name, districtList: [] };
-        var districtData = await District.find();
+        var districtList = await District.find({
+          cityIds: ObjectId(city._id)
+        });
+        for (district of districtList) {
+          const { _id, name } = district;
+          city.districtList.push({ _id, name });
+        }
+        locationList.push(city);
       }
       res.status(200).send({
-        major: majors
+        location: locationList
       });
     })
     .catch(err => {
