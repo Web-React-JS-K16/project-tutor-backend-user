@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const jwtSecretConfig = require("../../config/jwt-secret.config");
-
+const constant = require("../../config/constant");
 
 exports.createUserToken = (info) =>{
     const token = jwt.sign(
@@ -45,3 +45,10 @@ exports.decodeResetPasswordToken = async token => {
 }
 
 //=============
+exports.checkRole = (role) => (req, res, next) =>{
+    if (!req.user || req.user.role !== role){
+        return res.redirect(`${constant.frontendUrl}/student/login`)
+    }
+
+    return next();
+}

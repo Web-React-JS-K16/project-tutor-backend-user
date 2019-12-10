@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const ObjectId = require('mongodb').ObjectID;
 const User = require('../models/user.model');
 const Teacher = require('../models/teacher.model');
@@ -15,17 +14,9 @@ const sendEmailUtils = require('../utils/send-email.utils');
 const userTypes = require('../enums/EUserTypes');
 const contractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
-=======
-const User = require("../models/user.model");
-const passport = require("passport");
-const jwt = require("jsonwebtoken");
-const jwtSecretConfig = require("../../config/jwt-secret.config");
-const userUtils = require("../utils/user.utils");
-const sendEmailUtils = require("../utils/send-email.utils");
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
 
->>>>>>> 1d27a61669ad1810e7e782266ad4d9e2c241582e
 
 // Retrieving and return all users to the database
 exports.getUserList = (req, res) => {
@@ -428,7 +419,6 @@ exports.register = (req, res) => {
       .save()
       .then(userData => {
         // send active email
-<<<<<<< HEAD
         const token = userUtils.createActiveEmailTokenWithId(userData._id);
         sendEmailUtils.sendVerificationEmail(
           userData.displayName,
@@ -464,12 +454,6 @@ exports.register = (req, res) => {
                 .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại' });
             });
         }
-=======
-        const token = userUtils.createActiveEmailTokenWithId(data._id);
-        // console.log("token ative: ", token);
-        sendEmailUtils.sendVerificationEmail(data.displayName, data.email, token);
-        res.status(200).send({ user: data });
->>>>>>> 1d27a61669ad1810e7e782266ad4d9e2c241582e
       })
       .catch(err => {
         console.log('error: ', err.message);
@@ -735,17 +719,17 @@ exports.verifyTokenResetPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   const { password, userId } = req.body;
   try {
-    user = await User.findOne({_id: userId});
+    user = await User.findOne({ _id: userId });
     console.log("user: ", user);
     console.log("userid: ", userId);
-    if (user){
+    if (user) {
       const newPassword = bcrypt.hashSync(password, saltRounds)
-      const result = await User.updateOne({ _id: userId }, { $set: { passwordHash: newPassword, password}})
-      
+      const result = await User.updateOne({ _id: userId }, { $set: { passwordHash: newPassword, password } })
+
       // user.setpasswordHash(password);
       // user.password = password;
       // const result = user.save();
-      if (result){
+      if (result) {
         return res.status(200).send({ message: "Lấy lại mật khẩu thành công" });
       } else {
         return res.status(400).send({ message: 'Lấy lại mật khẩu thất bại' });
@@ -760,24 +744,78 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-exports.test = (req, res) => {
-  const { email } = req.body;
-  console.log('email: ', email);
+/**
+ * body: {password, oldPassword}
+ */
+exports.changePassword = async (req, res) => {
+  const { password, oldPassword, email } = req.body;
+  const {user} = req;
   try {
-    User.findOne({ email }, (err, data) => {
-      if (!data) {
-        res.status(400).send({ message: 'Tài khoản không tồn tại' });
+    console.log("user: ", user);
+    if (user) {
+      // check old password
+      if (user.validatePassword(oldPassword)) {
+        const newPassword = bcrypt.hashSync(password, saltRounds)
+        await User.updateOne({ _id: user._id }, { $set: { passwordHash: newPassword, password } })
+        return res.status(200).send({ message: "Đổi mật khẩu thành công." });
       } else {
-        const token = userUtils.createActiveEmailTokenWithId(data._id);
-        sendEmailUtils.sendVerificationEmail(
-          data.displayName,
-          data.email,
-          token
-        );
-        res.status(200).send({ message: 'Gửi email  thành công' });
+        return res.status(400).send({ message: 'Mật khẩu cũ không đúng.' });
       }
-    });
-  } catch (err) {
-    res.status(400).send({ message: 'Có lỗi xảy ra' });
+    } else {
+      return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+    }
+  } catch {
+    return res
+      .status(500)
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+  }
+};
+
+/**
+ * body: {user}
+ */
+exports.updateInfoStudent = async (req, res) => {
+  const { user } = req;
+  // try {
+  //   console.log("user: ", user);
+  //   if (user) {
+  //     // check old password
+  //     if (user.validatePassword(oldPassword)) {
+  //       const newPassword = bcrypt.hashSync(password, saltRounds)
+  //       await User.updateOne({ _id: user._id }, { $set: { passwordHash: newPassword, password } })
+  //       return res.status(200).send({ message: "Đổi mật khẩu thành công." });
+  //     } else {
+  //       return res.status(400).send({ message: 'Mật khẩu cũ không đúng.' });
+  //     }
+  //   } else {
+  //     return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+  //   }
+  // } catch {
+  //   return res
+  //     .status(500)
+  //     .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+  // }
+};
+
+/**
+ * body: {avatar}
+ */
+exports.updateAvatar = async (req, res) => {
+  const { avatar } = req.body;
+  const { user } = req;
+  try {
+    // console.log("user: ", user);
+    if (user) {
+     const result =  await User.updateOne({_id: user._id}, {$set: {avatar}});
+    // console.log("user rs: ", result);
+      return res.status(200).send({ message: 'Cập nhật ảnh đại diện thành công.' });
+
+    } else {
+      return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+    }
+  } catch {
+    return res
+      .status(500)
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
   }
 };
