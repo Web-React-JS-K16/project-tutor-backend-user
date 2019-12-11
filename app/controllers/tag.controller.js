@@ -1,8 +1,5 @@
 const Tag = require('../models/tag.model');
 
-/**
- * body: {displayName, phone, birthdate, gender, city, district, ward }
- */
 exports.getAll = async (req, res) => {
     try {
         const result = await Tag.find({});

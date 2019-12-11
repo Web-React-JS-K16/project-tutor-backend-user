@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const DistrictSchema = mongoose.Schema(
   {
     name: String,
-    cityId: {
+    cityIds: {
       type: Array,
       default: []
     }
