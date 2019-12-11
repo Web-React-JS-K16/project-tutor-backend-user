@@ -12,7 +12,7 @@ exports.getContractList = (req, res) => {
   User.findById({_id: ObjectId(userId)}).then(async user => {
       if (user) {
           if (user.typeID === UserTypes.TEACHER) {
-            Contract.find({teacherId: ObjectId(user._id}).populate('teacherId').populate('studentId').then(contractList => {
+            Contract.find({teacherId: ObjectId(user._id).populate('teacherId').populate('studentId').then(contractList => {
                 res.status(200).send({
                     contract: contractList
                 });
@@ -21,9 +21,10 @@ exports.getContractList = (req, res) => {
                 res.status(500).send({
                   message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
                 });
-            });
+            })
+            })
           } else if (user.typeID === UserTypes.STUDENT) {
-            Contract.find({studentId: ObjectId(user._id}).populate('teacherId').populate('studentId').then(contractList => {
+            Contract.find({studentId: ObjectId(user._id).populate('teacherId').populate('studentId').then(contractList => {
                 res.status(200).send({
                     contract: contractList
                 });
@@ -32,15 +33,40 @@ exports.getContractList = (req, res) => {
                 res.status(500).send({
                   message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
                 });
-            });
-          }
+            })
+          })
       }
-  }).catch(err => {
+  }}).catch(err => {
     console.log('error: ', err.message);
     res.status(500).send({
       message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
     });
   });
+};
+
+
+/**
+ * body: {_id} is contract's id
+ */
+exports.getContract = async (req, res) => {
+  const { _id } = req.params;
+  try {
+    // console.log("user: ", user);
+    if (user) {
+      const contract = Contract.findOne({ _id });
+      if (contract) {
+        return res.status(200).send({ payload: contract });
+      } else {
+        return res.status(400).send({ message: 'Hợp đồng không tồn tại.' });
+      }
+    } else {
+      return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+    }
+  } catch {
+    return res
+      .status(500)
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+  }
 };
 
 exports.createContract = (req, res) => {

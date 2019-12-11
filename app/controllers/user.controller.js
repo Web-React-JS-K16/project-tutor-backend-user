@@ -219,7 +219,7 @@ exports.getUserList = async (req, res) => {
   }
 };
 
-exports.countUsers = (req, res) => {
+exports.countUsers = async (req, res) => {
   var typeId = req.query.type || DefaultValues.typeId;
   var fromSalary = req.query.fromSalary || DefaultValues.fromSalary;
   var toSalary = req.query.toSalary || DefaultValues.toSalary;
@@ -940,32 +940,6 @@ exports.updateAvatar = async (req, res) => {
       return res
         .status(200)
         .send({ message: 'Cập nhật ảnh đại diện thành công.' });
-    } else {
-      return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
-    }
-  } catch {
-    return res
-      .status(500)
-      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
-  }
-};
-
-
-const Contract = require ('../models/contract.model')
-/**
- * body: {_id} is contract's id
- */
-exports.getContract = async (req, res) => {
-  const { _id } = req.params;
-  try {
-    // console.log("user: ", user);
-    if (user) {
-      const contract = Contract.findOne({_id});
-      if (contract){
-        return res.status(200).send({ payload: contract });
-      } else {
-        return res.status(400).send({ message: 'Hợp đồng không tồn tại.' });
-      }
     } else {
       return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
     }
