@@ -47,8 +47,10 @@ exports.decodeResetPasswordToken = async token => {
 //=============
 exports.checkRole = (role) => (req, res, next) =>{
     console.log("role: ", role, " ==", req.user.typeID)
-    if (!req.user || req.user.typeID !== role){
-        return res.redirect(`${constant.frontendUrl}/student/login`)
+    if (!req.user ){
+        return res.status(200).send({ isSuccess: false,message: 'Bạn cần đăng nhập để tiếp tục.' });
+    } else if (req.user.typeID !== role){
+        return res.status(400).send({ isSuccess: false,message: 'Bạn không có quyền truy cập.' });
     }
 
     return next();
