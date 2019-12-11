@@ -408,10 +408,19 @@ exports.getUserInfo = (req, res) => {
                   const districtData = await District.findOne({
                     _id: ObjectId(district)
                   });
-                  let formatSalary = formatCostHelper(
+                  const formatSalary = formatCostHelper(
                     salary.toString() + '000'
                   );
 
+                  // get tag
+                  const tagList = [];
+                  for (tag of tags) {
+                    const tagData = await Tag.findById({
+                      _id: ObjectId(tag._id)
+                    }).populate('majorId');
+                    tagList.push(tagData);
+                  }
+                  
                   res.status(200).send({
                     user: {
                       typeID,
@@ -423,11 +432,12 @@ exports.getUserInfo = (req, res) => {
                       teacherId: _id,
                       city: cityData,
                       district: districtData,
-                      salary: formatSalary,
+                      salary,
+                      formatSalary,
                       about,
                       successRate,
                       ratings,
-                      tags,
+                      tags: tagList,
                       jobs,
                       hoursWorked,
                       _id: userId,
