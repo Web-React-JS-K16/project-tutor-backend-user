@@ -29,7 +29,14 @@ exports.getUserList = async (req, res) => {
   var toSalary = req.query.toSalary || DefaultValues.toSalary;
   var majors = req.query.majors || DefaultValues.majors;
   var location = req.query.location || DefaultValues.location;
+  // var orderBy = req.query.orderBy || '';
+  var orderType = req.query.orderType || 'ASC';
 
+  if (orderType === 'ASC') {
+    orderType = 1;
+  } else {
+    orderType = -1;
+  }
   if (isNaN(typeId) || typeId < 0) {
     typeId = DefaultValues.typeId;
   } else {
@@ -96,6 +103,9 @@ exports.getUserList = async (req, res) => {
 
   if (typeId === UserTypes.TEACHER) {
     Teacher.find(query)
+      .sort({
+        salary: orderType
+      })
       .skip(itemPerPage * (pageNumber - 1))
       .limit(itemPerPage)
       .then(async teachers => {
@@ -133,6 +143,15 @@ exports.getUserList = async (req, res) => {
             _id: ObjectId(district)
           });
 
+          // get tag
+          const tagList = [];
+          for (tag of tags) {
+            const tagData = await Tag.findById({
+              _id: ObjectId(tag._id)
+            }).populate('majorId');
+            tagList.push(tagData);
+          }
+
           let formatSalary = formatCostHelper(salary.toString() + '000');
           teacherList.push({
             typeID,
@@ -148,7 +167,7 @@ exports.getUserList = async (req, res) => {
             about,
             successRate,
             ratings,
-            tags,
+            tags: tagList,
             jobs,
             hoursWorked,
             _id: userId
