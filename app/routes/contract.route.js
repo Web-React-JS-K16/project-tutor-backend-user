@@ -6,7 +6,7 @@ const passport = require('passport');
 // Retrieve all contracts
 app.get('/contract', contractController.getContractList);
 // get contract detail
-app.get('/contract/:_id',
+app.get('/contract/:id',
     passport.authenticate('jwt', { session: false }),
     contractController.getContract);
 

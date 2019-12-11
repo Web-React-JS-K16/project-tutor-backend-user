@@ -27,6 +27,7 @@ app.use(userRouter);
 app.use(tagRouter);
 app.use(teacherRouter);
 app.use(studentRouter);
+app.use(contractRouter);
 
 //connecting to the database
 mongoose.Promise = global.Promise;
