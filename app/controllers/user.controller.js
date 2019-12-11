@@ -932,7 +932,7 @@ const Contract = require ('../models/contract.model')
 /**
  * body: {_id} is contract's id
  */
-exports.updateAvatar = async (req, res) => {
+exports.getContract = async (req, res) => {
   const { _id } = req.params;
   try {
     // console.log("user: ", user);
