@@ -59,4 +59,9 @@ app.post('/user/update-avatar',
   passport.authenticate('jwt', { session: false }),
   userController.updateAvatar);
 
+  // get contract detail
+app.get('/contract/:_id',
+  passport.authenticate('jwt', { session: false }),
+  userController.getContract);
+
 module.exports = app;

@@ -880,3 +880,28 @@ exports.updateAvatar = async (req, res) => {
   }
 };
 
+
+const Contract = require ('../models/contract.model')
+/**
+ * body: {_id} is contract's id
+ */
+exports.updateAvatar = async (req, res) => {
+  const { _id } = req.params;
+  try {
+    // console.log("user: ", user);
+    if (user) {
+      const contract = Contract.findOne({_id});
+      if (contract){
+        return res.status(200).send({ payload: contract });
+      } else {
+        return res.status(400).send({ message: 'Hợp đồng không tồn tại.' });
+      }
+    } else {
+      return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+    }
+  } catch {
+    return res
+      .status(500)
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+  }
+};
