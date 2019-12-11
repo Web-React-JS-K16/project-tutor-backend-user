@@ -219,7 +219,7 @@ exports.getUserList = async (req, res) => {
   }
 };
 
-exports.countUsers = (req, res) => {
+exports.countUsers = async (req, res) => {
   var typeId = req.query.type || DefaultValues.typeId;
   var fromSalary = req.query.fromSalary || DefaultValues.fromSalary;
   var toSalary = req.query.toSalary || DefaultValues.toSalary;

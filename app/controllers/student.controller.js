@@ -16,10 +16,10 @@ exports.getInfoStudent = async (req, res) => {
             if (!studentInfo) {
                 return res.status(400).send({ message: 'Không tìm thấy thông tin người dùng' });
             }
-            const { city, district, ward } = studentInfo;
+            const { city, district } = studentInfo;
             const userResult = studentInfo.userId;
 
-            return res.status(200).send({ payload: { city, district, ward, user: userResult } });
+            return res.status(200).send({ payload: { city, district, user: userResult } });
         } else {
             return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
         }
@@ -33,12 +33,12 @@ exports.getInfoStudent = async (req, res) => {
  */
 exports.updateInfoStudent = async (req, res) => {
     const { user } = req;
-    const { city, district, ward } = req.body;
+    const { city, district } = req.body;
     try {
         if (user) {
-            await Student.updateOne({ userId: user._id }, { $set: { city, district, ward } });
+            await Student.updateOne({ userId: user._id }, { $set: { city, district } });
             await User.updateOne({ _id: user._id }, { $set: { ...req.body } });
-            return res.status(200).send({ message: 'Cấp nhật thông tin thành công.' });
+            return res.status(200).send({ message: 'Cập nhật thông tin thành công.' });
         } else {
             return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
         }
