@@ -14,7 +14,6 @@ const jwtSecretConfig = require('../../config/jwt-secret.config');
 const userUtils = require('../utils/user.utils');
 const sendEmailUtils = require('../utils/send-email.utils');
 const UserTypes = require('../enums/EUserTypes');
-const ContractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
@@ -225,8 +224,7 @@ exports.countUsers = (req, res) => {
   var fromSalary = req.query.fromSalary || DefaultValues.fromSalary;
   var toSalary = req.query.toSalary || DefaultValues.toSalary;
   var majors = req.query.majors || DefaultValues.majors;
-  var city = req.query.city || DefaultValues.city;
-  var district = req.query.district || DefaultValues.district;
+  var location = req.query.location || DefaultValues.location;
 
   if (isNaN(typeId) || typeId < 0) {
     typeId = DefaultValues.typeId;
@@ -243,23 +241,47 @@ exports.countUsers = (req, res) => {
   } else {
     toSalary = parseFloat(toSalary);
   }
-  if (majors.length === 0) {
-    Major.find().then(majorList => {
-      majors = majorList.map(major => {
-        return ObjectId(major._id);
-      });
-    });
-  } else {
-    majors = majors.map(majorId => {
-      return ObjectId(majorId);
-    });
+
+  // get tags by majorId
+  var tagList = [];
+  if (majors.length !== 0) {
+    for (majorId of majors) {
+      const tags = await Tag.find({ majorId: ObjectId(majorId) });
+      tagList = tagList.concat(tags);
+    }
+  }
+
+  // build query
+  var query = {};
+  query['salary'] = { $gte: fromSalary, $lte: toSalary };
+  query['$or'] = [];
+
+  if (tagList.length > 0) {
+    const queryInTags = {};
+    queryInTags['$in'] = [];
+    for (tag of tagList) {
+      queryInTags['$in'].push(ObjectId(tag._id));
+    }
+    query['tags._id'] = queryInTags;
+  }
+
+  Object.keys(location).forEach(key => {
+    const orCondition = { city: ObjectId(key) };
+    const queryInDistricts = {};
+    queryInDistricts['$in'] = [];
+    for (districtId of location[key].districtList) {
+      queryInDistricts['$in'].push(ObjectId(districtId));
+    }
+    orCondition['district'] = queryInDistricts;
+    query['$or'].push(orCondition);
+  });
+
+  if (query['$or'].length === 0) {
+    delete query['$or'];
   }
 
   if (typeId === UserTypes.TEACHER) {
-    Teacher.countDocuments({
-      salary: { $gte: fromSalary, $lte: toSalary },
-      'tags.majorId': { $in: [ObjectId('5ded138c8b7eb08d3c3a27d1')] }
-    })
+    Teacher.countDocuments(query)
       .then(quantity => {
         res.status(200).send({ user: quantity });
       })
@@ -285,6 +307,7 @@ exports.countUsers = (req, res) => {
 
 exports.getUserInfo = (req, res) => {
   var userId = req.query.id || '';
+
   User.findById({ _id: ObjectId(userId) })
     .then(user => {
       if (user) {
