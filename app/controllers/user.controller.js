@@ -14,6 +14,7 @@ const jwtSecretConfig = require('../../config/jwt-secret.config');
 const userUtils = require('../utils/user.utils');
 const sendEmailUtils = require('../utils/send-email.utils');
 const UserTypes = require('../enums/EUserTypes');
+const ContractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
@@ -333,7 +334,10 @@ exports.getUserInfo = (req, res) => {
         if (user.typeID === UserTypes.TEACHER) {
           Teacher.find({ userId: ObjectId(user._id) })
             .then(teacherData => {
-              Contract.find({ teacherId: ObjectId(user._id) })
+              Contract.find({
+                teacherId: ObjectId(user._id),
+                status: { $ne: ContractTypes.NOT_START }
+              })
                 .then(async contractsData => {
                   var contracts = [];
                   for (data of contractsData) {
@@ -420,7 +424,7 @@ exports.getUserInfo = (req, res) => {
                     }).populate('majorId');
                     tagList.push(tagData);
                   }
-                  
+
                   res.status(200).send({
                     user: {
                       typeID,
