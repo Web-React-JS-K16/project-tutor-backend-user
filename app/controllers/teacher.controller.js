@@ -20,7 +20,6 @@ exports.getInfo = async (req, res) => {
         if (!result) {
         return res.status(400).send({ message: 'Không tìm thấy thông tin người dùng!'});
         }
-
         const { city, district, salary, about, tags, jobs, hoursWorked, ratings, successRate } = result;
         const userResult = result.userId;
         return res.status(200).send({ payload: 
