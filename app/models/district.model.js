@@ -3,9 +3,9 @@ const mongoose = require('mongoose');
 const DistrictSchema = mongoose.Schema(
   {
     name: String,
-    cityIds: {
-      type: Array,
-      default: []
+    cityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'City'
     }
   },
   {
