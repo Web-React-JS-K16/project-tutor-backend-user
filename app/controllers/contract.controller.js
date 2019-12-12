@@ -98,6 +98,7 @@ exports.createContract = (req, res) => {
 /**
  * student report about contract
  * body: {contractId, content}
+ * Note: do not have to check userId in contract because it was checked in step get contract detail
  */
 exports.sendReport = async (req, res) => {
   const {  idContract, content } = req.body;

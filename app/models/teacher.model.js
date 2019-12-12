@@ -2,14 +2,6 @@ const mongoose = require('mongoose');
 
 const TeacherSchema = mongoose.Schema(
   {
-    city: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'City'
-    },
-    district: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'District'
-    },
     salary: { type: mongoose.Schema.Types.Decimal128, default: 0 },
     about: String,
     successRate: { type: Number, default: 0 },
