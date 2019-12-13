@@ -203,8 +203,8 @@ exports.getUserList = async (req, res) => {
             email,
             displayName,
             avatar,
-            city, 
-            district 
+            city,
+            district
           } = user[0];
 
           // get student
@@ -392,14 +392,14 @@ exports.getUserInfo = (req, res) => {
                     isActive,
                     email,
                     displayName,
-                    avatar
+                    avatar,
+                    city,
+                    district
                   } = user;
 
                   // get teacher
                   const {
                     _id,
-                    city,
-                    district,
                     salary,
                     about,
                     successRate,
