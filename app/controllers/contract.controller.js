@@ -3,6 +3,7 @@ const Contract = require('../models/contract.model');
 const Comment = require('../models/comment.model');
 const User = require('../models/user.model');
 const Report = require('../models/report.model');
+const Notification = require('../models/notification.model');
 const UserTypes = require('../enums/EUserTypes');
 const ContractTypes = require('../enums/EContractTypes');
 const DefaultValues = require('../utils/default-values.utils');
@@ -130,22 +131,23 @@ exports.getContract = async (req, res) => {
   const { id } = req.params;
   const { user } = req;
   try {
-    // console.log("user: ", user);
     if (user) {
       const contract = await Contract.findOne({ _id: id })
-        .populate('teacherId', { password: 0, passwordHash: 0 })
-        .populate('studentId', { password: 0, passwordHash: 0 });
 
       if (contract) {
+        // get user, city and district
+        const teacher = await User.findById(contract.teacherId, {passwordHash: 0, password: 0}).populate('city').populate('district')
+        const student = await User.findById(contract.studentId, { passwordHash: 0, password: 0 }).populate('city').populate('district')
+
         if (
-          contract.teacherId._id !== user._id &&
-          contract.studentId._id !== user._id
+          contract.teacherId._id.toString() === user._id.toString() || 
+          contract.studentId._id.toString() === user._id.toString()
         ) {
-          return res
-            .status(400)
-            .send({ message: 'Bạn không có quyền truy cập' });
+          const { teacherId, studentId, ...other} = contract;
+          const contractInfo = other._doc;
+          return res.status(200).send({ payload: {...contractInfo, teacherId: teacher, studentId: student} });
         }
-        return res.status(200).send({ payload: contract });
+        return res.status(400).send({ message: 'Bạn không có quyền truy cập' });
       } else {
         return res.status(400).send({ message: 'Hợp đồng không tồn tại.' });
       }
@@ -210,6 +212,140 @@ exports.sendReport = async (req, res) => {
     console.log(err);
     return res.status(500).send({
       isSuccess: false,
+      message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+    });
+  }
+};
+
+
+
+/**
+ * teacher approval contract
+ * input: {id} as idContract
+ */
+exports.approveContract = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const { user } = req;
+    if (user) {
+      const contract = await Contract.findById(ObjectId(id)).populate('teacherId');
+      if (contract) {
+        if (contract.status === ContractTypes.VALID){
+          return res.status(400).send({ isSuccess: true, message: 'Hợp đồng đã có hiệu lực trước đó.' });
+        }
+        // update contract status
+        await Contract.updateOne({ _id: ObjectId(id) }, { $set: { status: ContractTypes.VALID } })
+        // console.log("resutl: ", restult);
+        // create new notification to student
+        const notification = new Notification();
+        notification.content = `Hợp đồng ${contract.name} với giáo viên ${contract.teacherId.displayName} đã được chấp nhận.`
+        notification.link = `/contract-detail/${contract._id}`
+        notification.userId = contract.studentId;
+        await notification.save();
+
+        return res.status(200).send({ isSuccess: true, message: 'Cập nhật thành công' });
+      } else {
+          return res.status(400).send({ isSuccess: true, message: 'Hợp đồng không tồn tại' });
+      }
+    } else {
+      return res
+        .status(400)
+        .send({ isSuccess: false, message: 'Tài khoản không tồn tại.' });
+    }
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send({
+      isSuccess: false,
+      message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+    });
+  }
+};
+
+/**
+* teacher/ teacher cancel contract
+* input: {id} as idContract
+*/
+exports.cancelContract = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user } = req;
+    if (user) {
+      const contract = await Contract.findById(ObjectId(id)).populate('teacherId').populate('studentId');
+      if (contract) {
+        // update contract status
+        await Contract.updateOne({ _id: ObjectId(id) }, { $set: { status: ContractTypes.CANCEL, endDate: new Date() } })
+        
+        // create new notification to student
+        const notification = new Notification();
+        let content = '';
+        let receiver = ''
+        if (user.typeID === UserTypes.TEACHER) {
+          // send notification for student
+          content = `Hợp đồng ${contract.name} đã bị hủy bởi giáo viên ${contract.teacherId.displayName}.`
+          receiver = contract.studentId;
+        } else {
+          // send notification for teacher
+          content = `Hợp đồng ${contract.name} đã bị hủy bởi học sinh ${contract.studentId.displayName}.`
+          receiver = contract.teacherId;
+        }
+        notification.link = `/contract-detail/${contract._id}`
+        notification.userId = receiver;
+        notification.content = content;
+
+        await notification.save();
+
+        return res.status(200).send({ isSuccess: true, message: 'Hợp đồng đã bị hủy' });
+      } else {
+        return res.status(400).send({ isSuccess: true, message: 'Hợp đồng không tồn tại' });
+      }
+    } else {
+      return res
+        .status(400)
+        .send({ isSuccess: false, message: 'Tài khoản không tồn tại.' });
+    }
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send({
+      isSuccess: false,
+      message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+    });
+  }
+};
+
+/**
+* Student comment and rate contract
+* input: {comment, rating, token as token of student, id as contractId}
+*/
+exports.ratingContract = async (req, res) => {
+  try {
+    const { id, comment, rating } = req.body;
+    const { user } = req;
+    if (user) {
+      const contract = await Contract.findById(ObjectId(id)).populate('studentId');
+      if (contract) {
+        // update contract status
+        await Contract.updateOne({ _id: ObjectId(id) }, { $set: {rating, comment } })
+
+        // create new notification to student
+        const notification = new Notification();
+          // send notification for teacher
+        notification.link = `/contract-detail/${contract._id}`
+        notification.userId = contract.teacherId;
+        notification.content = `${contract.studentId.displayName} đã thêm đánh giá và bình luận cho hợp đồng ${contract.name}.`;
+        await notification.save();
+
+        return res.status(200).send({message: 'Thêm đánh giá thành công' });
+      } else {
+        return res.status(400).send({message: 'Hợp đồng không tồn tại' });
+      }
+    } else {
+      return res
+        .status(400)
+        .send({ isSuccess: false, message: 'Tài khoản không tồn tại.' });
+    }
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send({
       message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
     });
   }
