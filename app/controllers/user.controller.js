@@ -121,14 +121,14 @@ exports.getUserList = async (req, res) => {
             isActive,
             email,
             displayName,
-            avatar
+            avatar,
+            city,
+            district
           } = user[0];
 
           // get teacher
           const {
             _id,
-            city,
-            district,
             salary,
             about,
             successRate,
@@ -202,11 +202,13 @@ exports.getUserList = async (req, res) => {
             isActive,
             email,
             displayName,
-            avatar
+            avatar,
+            city, 
+            district 
           } = user[0];
 
           // get student
-          const { _id, city, district, userId } = student;
+          const { _id, userId } = student;
           const cityData = await City.findOne({ _id: ObjectId(city) });
           const districtData = await District.findOne({
             _id: ObjectId(district)
