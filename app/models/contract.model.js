@@ -27,10 +27,17 @@ const ContractSchema = mongoose.Schema(
     },
     endDate: {
       type: mongoose.Schema.Types.Date,
-      default: new Date()
+      // default: new Date()
     },
     costPerHour: { type: mongoose.Schema.Types.Decimal128, default: 0 },
-    workingHour: { type: Number, default: 0 }
+    workingHour: { type: Number, default: 0 },
+    rating: { type: Number, default: null },
+    comment: {
+      time: {
+        type: mongoose.Schema.Types.Date,
+      },
+      content: String
+    }
   },
   {
     timestamps: true
