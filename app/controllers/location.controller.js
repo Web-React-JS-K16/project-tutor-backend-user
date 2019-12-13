@@ -10,7 +10,7 @@ exports.getLocationList = (req, res) => {
       for (city of cities) {
         var city = { _id: city._id, name: city.name, districtList: [] };
         var districtList = await District.find({
-          cityIds: ObjectId(city._id)
+          cityId: ObjectId(city._id)
         });
         for (district of districtList) {
           const { _id, name } = district;

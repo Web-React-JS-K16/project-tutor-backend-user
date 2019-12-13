@@ -14,6 +14,7 @@ const jwtSecretConfig = require('../../config/jwt-secret.config');
 const userUtils = require('../utils/user.utils');
 const sendEmailUtils = require('../utils/send-email.utils');
 const UserTypes = require('../enums/EUserTypes');
+const ContractTypes = require('../enums/EContractTypes');
 const formatCostHelper = require('../helpers/format-cost.helper');
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
@@ -120,14 +121,14 @@ exports.getUserList = async (req, res) => {
             isActive,
             email,
             displayName,
-            avatar
+            avatar,
+            city,
+            district
           } = user[0];
 
           // get teacher
           const {
             _id,
-            city,
-            district,
             salary,
             about,
             successRate,
@@ -201,11 +202,13 @@ exports.getUserList = async (req, res) => {
             isActive,
             email,
             displayName,
-            avatar
+            avatar,
+            city, 
+            district 
           } = user[0];
 
           // get student
-          const { _id, city, district, userId } = student;
+          const { _id, userId } = student;
           const cityData = await City.findOne({ _id: ObjectId(city) });
           const districtData = await District.findOne({
             _id: ObjectId(district)
@@ -333,7 +336,10 @@ exports.getUserInfo = (req, res) => {
         if (user.typeID === UserTypes.TEACHER) {
           Teacher.find({ userId: ObjectId(user._id) })
             .then(teacherData => {
-              Contract.find({ teacherId: ObjectId(user._id) })
+              Contract.find({
+                teacherId: ObjectId(user._id),
+                status: { $ne: ContractTypes.NOT_START }
+              })
                 .then(async contractsData => {
                   var contracts = [];
                   for (data of contractsData) {
@@ -408,9 +414,18 @@ exports.getUserInfo = (req, res) => {
                   const districtData = await District.findOne({
                     _id: ObjectId(district)
                   });
-                  let formatSalary = formatCostHelper(
+                  const formatSalary = formatCostHelper(
                     salary.toString() + '000'
                   );
+
+                  // get tag
+                  const tagList = [];
+                  for (tag of tags) {
+                    const tagData = await Tag.findById({
+                      _id: ObjectId(tag._id)
+                    }).populate('majorId');
+                    tagList.push(tagData);
+                  }
 
                   res.status(200).send({
                     user: {
@@ -423,11 +438,12 @@ exports.getUserInfo = (req, res) => {
                       teacherId: _id,
                       city: cityData,
                       district: districtData,
-                      salary: formatSalary,
+                      salary,
+                      formatSalary,
                       about,
                       successRate,
                       ratings,
-                      tags,
+                      tags: tagList,
                       jobs,
                       hoursWorked,
                       _id: userId,
