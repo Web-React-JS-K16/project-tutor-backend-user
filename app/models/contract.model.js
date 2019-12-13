@@ -32,7 +32,12 @@ const ContractSchema = mongoose.Schema(
     costPerHour: { type: mongoose.Schema.Types.Decimal128, default: 0 },
     workingHour: { type: Number, default: 0 },
     rating: { type: Number, default: null },
-    comment: String
+    comment: {
+      time: {
+        type: mongoose.Schema.Types.Date,
+      },
+      content: String
+    }
   },
   {
     timestamps: true

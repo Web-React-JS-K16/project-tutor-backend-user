@@ -49,5 +49,6 @@ app.put('/contract/rating',
   userUtils.checkRole(EUserType.STUDENT),
   contractController.ratingContract);
 
-
+app.test('/contract/set/:id',
+  contractController.set);
 module.exports = app;

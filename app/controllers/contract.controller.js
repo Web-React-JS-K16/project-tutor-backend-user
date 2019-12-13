@@ -324,7 +324,8 @@ exports.ratingContract = async (req, res) => {
       const contract = await Contract.findById(ObjectId(id)).populate('studentId');
       if (contract) {
         // update contract status
-        await Contract.updateOne({ _id: ObjectId(id) }, { $set: {rating, comment } })
+        const newComment = { time: new Date(), content: comment } 
+        await Contract.updateOne({ _id: ObjectId(id) }, { $set: {rating, comment: newComment} })
 
         // create new notification to student
         const notification = new Notification();
@@ -334,7 +335,7 @@ exports.ratingContract = async (req, res) => {
         notification.content = `${contract.studentId.displayName} đã thêm đánh giá và bình luận cho hợp đồng ${contract.name}.`;
         await notification.save();
 
-        return res.status(200).send({message: 'Thêm đánh giá thành công' });
+        return res.status(200).send({message: 'Thêm đánh giá thành công', comment: newComment });
       } else {
         return res.status(400).send({message: 'Hợp đồng không tồn tại' });
       }
@@ -349,4 +350,11 @@ exports.ratingContract = async (req, res) => {
       message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
     });
   }
+};
+
+
+exports.test = async (req, res) => {
+  const {id} = req.params
+   await Contract.updateOne({ _id: ObjectId(id) }, { $set: {status: VALID } })
+
 };
