@@ -346,7 +346,7 @@ exports.countUsers = async (req, res) => {
 };
 
 exports.getUserInfo = (req, res) => {
-  var userId = req.query.id || '';
+  var userId = req.params.id || '';
 
   User.findById({ _id: ObjectId(userId) })
     .populate('city')

@@ -12,6 +12,7 @@ const locationRouter = require('./app/routes/location.route');
 const contractRouter = require('./app/routes/contract.route');
 const cityRouter = require('./app/routes/city.route');
 const districtRouter = require('./app/routes/district.route');
+const notificationRouter = require('./app/routes/notification.route');
 
 const cors = require('cors');
 require('./passport');
@@ -34,6 +35,7 @@ app.use(locationRouter);
 app.use(contractRouter);
 app.use(cityRouter);
 app.use(districtRouter);
+app.use(notificationRouter);
 
 //connecting to the database
 mongoose.Promise = global.Promise;
@@ -64,6 +66,7 @@ app.get('/location', locationRouter);
 app.get('/contract', contractRouter);
 app.get('/city', cityRouter);
 app.get('/district', districtRouter);
+app.get('/notification', notificationRouter);
 
 app.listen(parseInt(process.env.PORT) || 4500, () => {
   console.log('Server is listening on port 4500');
