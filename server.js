@@ -77,39 +77,19 @@ var server = app.listen(parseInt(process.env.PORT) || 4500, () => {
 // chat using soket.io
 const socketio = require('socket.io');
 const chatUtils = require ('./app/utils/chat.utils');
-
-// var http = require('http');
-// var server = http.createServer(app);
-// const io = socketio(server);
-
-// var server = app.listen(4500, () => {
-//   console.log("Listening ..");
-// });
-
-// var server = require('http').Server(app);
+const constant = require ('./config/constant');
 var io = require('socket.io').listen(server);
 /**
  * Config socket io for chat
  */
 io.on('connect', (socket) => {
-  console.log('before join')
   socket.on('join', async ({ userId, displayName, room  }, callback) => {
     const { error, user } = await chatUtils.addUserToRoom({ id: socket.id, userId, displayName, room});
     console.log("after addUser: ", user);
 
     try {
       if (error) return callback(error);
-      socket.join(user.room);
-      // socket.join("testRoom");
-      console.log('after join')
-      io.to(user.room).emit('message', { message: "test io"});
-      io.to(user.room).emit('message', { message: "Xin chào bạn nhé" });
-
-
-      console.log("call back: ", callback);
-      callback(); 
-
-      // console.log("new room: ", user.room);
+      socket.join(userId);
       console.log("connect successfully!");
       callback();
     } catch (err) {
@@ -117,28 +97,45 @@ io.on('connect', (socket) => {
     }
   });
 
-  socket.on('testListen', (payload, callback) => {
-    console.log ("my payload: ", payload)
-      io.to("5defc8ea486aa9176437b354").emit('sendToClient', { message: "hihihi" });
-    io.to("5defc8ea486aa9176437b354").emit('message', { message: "123456789345678" });
-      console.log("call back: ", callback);
+  // user create a new room
+  socket.on(constant.SOCKET_ON_CREATE_ROOM, (payload, callback) => {
+    console.log ("create new room: ", payload)
+    const {from, to, room} = payload;
+    socket.join(room);
+    // send request create new room to roomate
+    io.to(to).emit(constant.SOCKET_EMIT_CREATE_ROOM, {room, idRoomate: from});
+    if (callback) {
       callback(); 
+    }
   })
-  // socket.on('sendMessage', (message, callback) => {
-  //   if (message.type && message.type === 'endGame') {
-  //     console.log("on disconnect by message: ", socket.id);
-  //     const user = removeUser(socket.id);
-  //     if (user) {
-  //       io.to(user.room).emit('message', { user: 'Admin', type: "endGame", text: `${user.username} đã rời khỏi phòng chơi.` });
-  //     }
-  //   }
-  //   else { // send message
-  //     const user = getUser(socket.id);
-  //     // console.log("get user: ", user);
-  //     io.to(user.room).emit('message', { user: user.username, text: message, time: Date.now() });
-  //     callback();
-  //   }
-  // });
+
+  // user accept new room and request server to join user to that new room
+  socket.on(constant.SOCKET_ON_ACCEPT_NEW_ROOM, (payload, callback) => {
+    console.log("server accept room: \n", payload)
+    const {isAccept, room } = payload;
+    socket.join(room);
+    
+    if (callback) {
+      callback();
+    }
+  })
+
+
+  socket.on(constant.SOCKET_ON_RECIEVE_MESSAGE, (payload, callback) => {
+    console.log("my payload: ", payload)
+    const {room, from, to, time, message} = payload;
+    // send message to all member in room
+    io.in(room).emit(constant.SOCKET_EMIT_SEND_MESSAGE, {
+      message: message,
+      from,
+      room,
+      time
+    });
+    if (callback){
+      callback();
+    }
+  })
+
   socket.on('disconnect', () => {
     console.log("on disconnect: ", socket.id);
     const user = chatUtils.removeUserFromRoom(socket.id);
