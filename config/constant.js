@@ -15,4 +15,5 @@ exports.SOCKET_EMIT_CREATE_ROOM = 'create room' // when server send request crea
 
 exports.SOCKET_ON_ACCEPT_NEW_ROOM = 'accept room' // send to server a request create a new room
 
-        
+exports.SOCKET_EMIT_ROOMATE_OFF = 'roomate off' // send to server a request create a new room
+

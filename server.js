@@ -75,7 +75,7 @@ var server = app.listen(parseInt(process.env.PORT) || 4500, () => {
 
 
 // chat using soket.io
-const socketio = require('socket.io');
+// const socketio = require('socket.io');
 const chatUtils = require ('./app/utils/chat.utils');
 const constant = require ('./config/constant');
 var io = require('socket.io').listen(server);
@@ -83,17 +83,19 @@ var io = require('socket.io').listen(server);
  * Config socket io for chat
  */
 io.on('connect', (socket) => {
-  socket.on('join', async ({ userId, displayName, room  }, callback) => {
-    const { error, user } = await chatUtils.addUserToRoom({ id: socket.id, userId, displayName, room});
-    console.log("after addUser: ", user);
+  socket.on('join', ({ userId }, callback) => {
+    chatUtils.addUserToActiveList({userId, socketId: socket.id});
+    socket.join(userId); // to send notification
 
-    try {
-      if (error) return callback(error);
-      socket.join(userId);
-      console.log("connect successfully!");
-      callback();
-    } catch (err) {
-      console.error(err);
+    const rooms = chatUtils.getRoomChatForUser(userId);
+    console.log("get rooms: ", rooms)
+    if (rooms) {
+      rooms.map(item =>{
+        socket.join(item.room); // to send message chat
+      })
+    }
+    if (callback) {
+      callback({rooms});
     }
   });
 
@@ -104,6 +106,7 @@ io.on('connect', (socket) => {
     socket.join(room);
     // send request create new room to roomate
     io.to(to).emit(constant.SOCKET_EMIT_CREATE_ROOM, {room, idRoomate: from});
+    chatUtils.createRoom({room, members: [from, to]})
     if (callback) {
       callback(); 
     }
@@ -138,9 +141,12 @@ io.on('connect', (socket) => {
 
   socket.on('disconnect', () => {
     console.log("on disconnect: ", socket.id);
-    const user = chatUtils.removeUserFromRoom(socket.id);
-    if (user) {
-      io.to(user.room).emit('message', {text: `${user.displayName} đã offline.` });
+    const roomSendNotification = chatUtils.removeUser(socket.id);
+    if (roomSendNotification.length > 0) {
+      roomSendNotification.map(room => {
+        // send message: roomate was offline
+        io.to(room).emit(constant.SOCKET_EMIT_ROOMATE_OFF, {room});
+      })
     }
   })
 });
