@@ -358,14 +358,14 @@ exports.getUserInfo = (req, res) => {
             .then(teacherData => {
               Contract.find({
                 teacherId: ObjectId(user._id),
-                status: { $ne: ContractTypes.NOT_START }
+                status: { $ne: ContractTypes.WAIT_FOR_PAYMENT }
               })
                 .then(async contractsData => {
                   var contracts = [];
                   for (data of contractsData) {
                     // get comment of contract
                     const commentData = await Comment.find({
-                      contractId: ObjectId(data._id)
+                      contract: ObjectId(data._id)
                     });
 
                     // get contract
@@ -489,7 +489,7 @@ exports.getUserInfo = (req, res) => {
                   for (data of contractsData) {
                     // get comment of contract
                     const commentData = await Comment.find({
-                      contractId: ObjectId(data._id)
+                      contract: ObjectId(data._id)
                     });
 
                     // get contract

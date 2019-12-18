@@ -8,7 +8,7 @@ const CommentSchema = mongoose.Schema(
       default: new Date()
     },
     ratings: Number,
-    contractId: {
+    contract: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Contract'
     }
