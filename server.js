@@ -12,6 +12,7 @@ const locationRouter = require('./app/routes/location.route');
 const contractRouter = require('./app/routes/contract.route');
 const cityRouter = require('./app/routes/city.route');
 const districtRouter = require('./app/routes/district.route');
+const chatRouter = require ('./app/routes/chat.route');
 
 const cors = require('cors');
 require('./passport');
@@ -38,6 +39,7 @@ app.use(locationRouter);
 app.use(contractRouter);
 app.use(cityRouter);
 app.use(districtRouter);
+app.use(chatRouter);
 
 //connecting to the database
 mongoose.Promise = global.Promise;
@@ -68,6 +70,7 @@ app.get('/location', locationRouter);
 app.get('/contract', contractRouter);
 app.get('/city', cityRouter);
 app.get('/district', districtRouter);
+app.get('/chat', chatRouter);
 
 var server = app.listen(parseInt(process.env.PORT) || 4500, () => {
   console.log('Server is listening on port 4500');
@@ -83,15 +86,19 @@ var io = require('socket.io').listen(server);
  * Config socket io for chat
  */
 io.on('connect', (socket) => {
-  socket.on('join', ({ userId }, callback) => {
+  socket.on('join', async ({ userId, typeID }, callback) => {
     chatUtils.addUserToActiveList({userId, socketId: socket.id});
     socket.join(userId); // to send notification
 
-    const rooms = chatUtils.getRoomChatForUser(userId);
-    console.log("get rooms: ", rooms)
+    // TODO
+    const rooms = await chatUtils.getRoomChatForUser(userId, typeID);
+    // console.log("get rooms: ", rooms)
     if (rooms) {
       rooms.map(item =>{
+        const {room , teacher, student} = item;
         socket.join(item.room); // to send message chat
+        // to system send notification when roomate is off
+        chatUtils.addRoomToActiveArr({room, members: [student._id.toString(), teacher._id.toString()]}) 
       })
     }
     if (callback) {
@@ -99,14 +106,16 @@ io.on('connect', (socket) => {
     }
   });
 
-  // user create a new room
-  socket.on(constant.SOCKET_ON_CREATE_ROOM, (payload, callback) => {
+  // user create a new room => join user to new room
+  socket.on(constant.SOCKET_ON_OPEN_ROOM, (payload, callback) => {
     console.log ("create new room: ", payload)
-    const {from, to, room} = payload;
+      const { student, teacher, room,} = payload;
     socket.join(room);
     // send request create new room to roomate
-    io.to(to).emit(constant.SOCKET_EMIT_CREATE_ROOM, {room, idRoomate: from});
-    chatUtils.createRoom({room, members: [from, to]})
+    io.to(teacher).emit(constant.SOCKET_EMIT_OPEN_ROOM, {room });
+    // *NOTE: members[0]: student, member[1]: teacher
+    // chatUtils.createRoom({room, members: [student, teacher]})
+
     if (callback) {
       callback(); 
     }
@@ -123,17 +132,21 @@ io.on('connect', (socket) => {
     }
   })
 
-
-  socket.on(constant.SOCKET_ON_RECIEVE_MESSAGE, (payload, callback) => {
+  socket.on(constant.SOCKET_ON_RECIEVE_MESSAGE, async (payload, callback) => {
     console.log("my payload: ", payload)
-    const {room, from, to, time, message} = payload;
-    // send message to all member in room
-    io.in(room).emit(constant.SOCKET_EMIT_SEND_MESSAGE, {
-      message: message,
-      from,
-      room,
-      time
-    });
+    const {room, from, time, message} = payload;
+    // save msg to db
+    const {error} = await chatUtils.saveMessage({room, newMessage: {content: message, from, time}});
+    if (!error) {
+      // send message to all member in room
+      io.in(room).emit(constant.SOCKET_EMIT_SEND_MESSAGE, {
+        message,
+        from,
+        room,
+        time
+      });
+    }
+    
     if (callback){
       callback();
     }
@@ -141,13 +154,25 @@ io.on('connect', (socket) => {
 
   socket.on('disconnect', () => {
     console.log("on disconnect: ", socket.id);
-    const roomSendNotification = chatUtils.removeUser(socket.id);
-    if (roomSendNotification.length > 0) {
-      roomSendNotification.map(room => {
-        // send message: roomate was offline
-        io.to(room).emit(constant.SOCKET_EMIT_ROOMATE_OFF, {room});
-      })
+    const result = chatUtils.removeUser(socket.id);
+
+    if (result) {
+      const { roomSendNotification, userId } = result;
+      // console.log("room send notifi: ", roomSendNotification)
+      if (roomSendNotification.length > 0) {
+        roomSendNotification.map(item => {
+          // send message: roomate was offline
+          //sending to all clients except sender
+          console.log("room off: ", item)
+          socket.broadcast.to(item.room).emit(constant.SOCKET_EMIT_ROOMATE_OFF, 
+            { room: item.room,
+            userLeft: userId })
+          // io.to(room).emit(constant.SOCKET_EMIT_ROOMATE_OFF, {room});
+        })
+      }
     }
+
+
   })
 });
 

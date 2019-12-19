@@ -10,8 +10,8 @@ exports.frontendUrl = 'http://localhost:3000'
 exports.SOCKET_EMIT_SEND_MESSAGE = 'message'
 exports.SOCKET_ON_RECIEVE_MESSAGE = 'message'
 
-exports.SOCKET_ON_CREATE_ROOM = 'create room'
-exports.SOCKET_EMIT_CREATE_ROOM = 'create room' // when server send request create a new room, client will accept
+exports.SOCKET_ON_OPEN_ROOM = 'open room'
+exports.SOCKET_EMIT_OPEN_ROOM = 'open room' // when server send request create a new room, client will accept
 
 exports.SOCKET_ON_ACCEPT_NEW_ROOM = 'accept room' // send to server a request create a new room
 
