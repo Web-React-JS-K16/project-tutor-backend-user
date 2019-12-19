@@ -109,7 +109,7 @@ exports.removeUser = (socketId) => {
     }
 
     if (activeUserArr[indexActive].socketId.length === 1) { // if this is the lastest socket of user
-        console.log("this is the last socket of user")
+        // console.log("this is the last socket of user")
         const userId = activeUserArr[indexActive].userId;
         // delete user from active list
         activeUserArr = [...activeUserArr.slice(0, indexActive), ...activeUserArr.slice(indexActive+1)]

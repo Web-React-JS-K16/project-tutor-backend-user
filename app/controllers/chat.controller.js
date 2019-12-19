@@ -8,12 +8,12 @@ exports.getAll = async (req, res) => {
     let chatRoom= {}
     if (user.typeID === EUserType.STUDENT){
         chatRoom = await ChatModel.find({ student: user._id })
-            .populate('student', { displayName: 1 })
-            .populate('teacher', { displayName: 1 })
+            .populate('student', { displayName: 1, avatar: 1 , typeID: 1})
+            .populate('teacher', { displayName: 1, avatar: 1, typeID: 1})
     } else {
         chatRoom = await ChatModel.find({ teacher: user._id })
-            .populate('student', { displayName: 1 })
-            .populate('teacher', { displayName: 1 })
+            .populate('student', { displayName: 1, avatar: 1, typeID: 1})
+            .populate('teacher', { displayName: 1, avatar: 1, typeID: 1})
     }
     // console.log("get all chat room: ", chatRoom);
     return res.status(200).send({ payload: chatRoom });
@@ -46,13 +46,15 @@ exports.create = async (req, res) => {
         // const { user } = req
         const { room} = req.body;
         const existRoom = await ChatModel.findOne({room});
-        console.log("is exist:" , isExist)
+        console.log("is exist:", existRoom)
 
         if (!existRoom) {
             const newRoom = new ChatModel(req.body);
             await newRoom.save();
 
-            const result = await ChatModel.findOne({room});
+            const result = await ChatModel.findOne({room})
+                .populate('student', { displayName: 1, avatar: 1, typeID: 1 })
+                .populate('teacher', { displayName: 1, avatar: 1, typeID: 1 })
             return res.status(200).send({ payload: result });
         } else {
             return res.status(400).send({message: 'Phòng chat đã tồn tại' });
