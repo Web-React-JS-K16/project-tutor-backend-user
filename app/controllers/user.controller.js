@@ -358,7 +358,7 @@ exports.getUserInfo = (req, res) => {
             .then(teacherData => {
               Contract.find({
                 teacherId: ObjectId(user._id),
-                status: { $ne: ContractTypes.WAIT_FOR_PAYMENT }
+                status: ContractTypes.IS_COMPLETED_BY_ADMIN
               })
                 .then(async contractsData => {
                   var contracts = [];

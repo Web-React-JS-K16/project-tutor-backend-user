@@ -7,5 +7,6 @@ module.exports = {
   fromSalary: 0,
   toSalary: 1000000,
   majors: [],
-  location: {}
+  location: {},
+  contractType: -1
 };

@@ -14,6 +14,7 @@ exports.getContractList = (req, res) => {
   var userId = req.query.userId || '';
   var pageNumber = req.query.page || DefaultValues.pageNumber;
   var itemPerPage = req.query.limit || DefaultValues.itemPerPage;
+  var status = req.query.status || DefaultValues.contractType;
 
   if (isNaN(pageNumber) || pageNumber < 1) {
     pageNumber = DefaultValues.pageNumber;
@@ -25,14 +26,27 @@ exports.getContractList = (req, res) => {
   } else {
     itemPerPage = parseInt(itemPerPage);
   }
+  if (isNaN(status)) {
+    status = DefaultValues.contractType;
+  } else {
+    status = parseInt(status);
+  }
 
   User.findById({ _id: ObjectId(userId) })
     .then(async user => {
       if (user) {
         if (user.typeID === UserTypes.TEACHER) {
-          Contract.find({
-            teacherId: ObjectId(user._id)
-          })
+          // build query for teacher
+          var queryTeacher = {};
+          queryTeacher['teacherId'] = ObjectId(user._id);
+          if (status === DefaultValues.contractType) {
+            // all
+            queryTeacher['status'] = { $ne: ContractTypes.WAIT_FOR_PAYMENT };
+          } else {
+            queryTeacher['status'] = status;
+          }
+
+          Contract.find(queryTeacher)
             .skip(itemPerPage * (pageNumber - 1))
             .limit(itemPerPage)
             .then(contractList => {
@@ -47,9 +61,14 @@ exports.getContractList = (req, res) => {
               });
             });
         } else if (user.typeID === UserTypes.STUDENT) {
-          Contract.find({
-            studentId: ObjectId(user._id)
-          })
+          // build query for student
+          var queryStudent = {};
+          queryStudent['studentId'] = ObjectId(user._id);
+          if (status !== DefaultValues.contractType) {
+            queryStudent['status'] = status;
+          }
+
+          Contract.find(queryStudent)
             .skip(itemPerPage * (pageNumber - 1))
             .limit(itemPerPage)
             .then(contractList => {
@@ -78,14 +97,29 @@ exports.getContractList = (req, res) => {
 
 exports.countContracts = async (req, res) => {
   var userId = req.query.userId || '';
+  var status = req.query.status || DefaultValues.contractType;
+
+  if (isNaN(status)) {
+    status = DefaultValues.contractType;
+  } else {
+    status = parseInt(status);
+  }
 
   User.findById({ _id: ObjectId(userId) })
     .then(async user => {
       if (user) {
         if (user.typeID === UserTypes.TEACHER) {
-          Contract.countDocuments({
-            teacherId: ObjectId(user._id)
-          })
+          // build query for teacher
+          var queryTeacher = {};
+          queryTeacher['teacherId'] = ObjectId(user._id);
+          if (status === DefaultValues.contractType) {
+            // all
+            queryTeacher['status'] = { $ne: ContractTypes.WAIT_FOR_PAYMENT };
+          } else {
+            queryTeacher['status'] = status;
+          }
+
+          Contract.countDocuments(queryTeacher)
             .then(quantity => {
               res.status(200).send({
                 contract: quantity
@@ -98,9 +132,14 @@ exports.countContracts = async (req, res) => {
               });
             });
         } else if (user.typeID === UserTypes.STUDENT) {
-          Contract.countDocuments({
-            studentId: ObjectId(user._id)
-          })
+          // build query for student
+          var queryStudent = {};
+          queryStudent['studentId'] = ObjectId(user._id);
+          if (status !== DefaultValues.contractType) {
+            queryStudent['status'] = status;
+          }
+
+          Contract.countDocuments(queryStudent)
             .then(quantity => {
               res.status(200).send({
                 contract: quantity
