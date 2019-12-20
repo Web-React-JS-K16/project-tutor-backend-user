@@ -2,13 +2,17 @@ const mongoose = require('mongoose');
 
 const UserSchema = mongoose.Schema(
   {
-    idUser: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
     content: String,
     link: String,
-    idDelete:  {
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    isRead: {
       type: Boolean,
       default: false
     }

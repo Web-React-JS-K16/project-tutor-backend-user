@@ -73,10 +73,28 @@ exports.getUserList = async (req, res) => {
     }
   }
 
+  // get user ids that meet location condition
+  var userList = [];
+  var userIdQuery = {};
+  userIdQuery['$or'] = [];
+  Object.keys(location).forEach(key => {
+    const orCondition = { city: ObjectId(key) };
+    const queryInDistricts = {};
+    queryInDistricts['$in'] = [];
+    for (districtId of location[key].districtList) {
+      queryInDistricts['$in'].push(ObjectId(districtId));
+    }
+    orCondition['district'] = queryInDistricts;
+    userIdQuery['$or'].push(orCondition);
+  });
+  if (userIdQuery['$or'].length > 0) {
+    userList = await User.find(userIdQuery);
+  }
+
   // build query
   var query = {};
+
   query['salary'] = { $gte: fromSalary, $lte: toSalary };
-  query['$or'] = [];
 
   if (tagList.length > 0) {
     const queryInTags = {};
@@ -87,19 +105,13 @@ exports.getUserList = async (req, res) => {
     query['tags._id'] = queryInTags;
   }
 
-  Object.keys(location).forEach(key => {
-    const orCondition = { city: ObjectId(key) };
-    const queryInDistricts = {};
-    queryInDistricts['$in'] = [];
-    for (districtId of location[key].districtList) {
-      queryInDistricts['$in'].push(ObjectId(districtId));
+  if (userList.length > 0) {
+    const queryInUserIds = {};
+    queryInUserIds['$in'] = [];
+    for (user of userList) {
+      queryInUserIds['$in'].push(ObjectId(user._id));
     }
-    orCondition['district'] = queryInDistricts;
-    query['$or'].push(orCondition);
-  });
-
-  if (query['$or'].length === 0) {
-    delete query['$or'];
+    query['userId'] = queryInUserIds;
   }
 
   if (typeId === UserTypes.TEACHER) {
@@ -112,7 +124,9 @@ exports.getUserList = async (req, res) => {
       .then(async teachers => {
         var teacherList = [];
         for (teacher of teachers) {
-          const user = await User.find({ _id: ObjectId(teacher.userId) });
+          const user = await User.find({ _id: ObjectId(teacher.userId._id) })
+            .populate('city')
+            .populate('district');
 
           // get user
           const {
@@ -139,11 +153,6 @@ exports.getUserList = async (req, res) => {
             userId
           } = teacher;
 
-          const cityData = await City.findOne({ _id: ObjectId(city) });
-          const districtData = await District.findOne({
-            _id: ObjectId(district)
-          });
-
           // get tag
           const tagList = [];
           for (tag of tags) {
@@ -162,8 +171,8 @@ exports.getUserList = async (req, res) => {
             displayName,
             avatar,
             teacherId: _id,
-            city: cityData,
-            district: districtData,
+            city,
+            district,
             salary: formatSalary,
             about,
             successRate,
@@ -193,7 +202,9 @@ exports.getUserList = async (req, res) => {
         var studentList = [];
 
         for (student of students) {
-          const user = await User.find({ _id: ObjectId(student.userId) });
+          const user = await User.find({ _id: ObjectId(student.userId) })
+            .populate('city')
+            .populate('district');
 
           // get user
           const {
@@ -209,10 +220,6 @@ exports.getUserList = async (req, res) => {
 
           // get student
           const { _id, userId } = student;
-          const cityData = await City.findOne({ _id: ObjectId(city) });
-          const districtData = await District.findOne({
-            _id: ObjectId(district)
-          });
 
           studentList.push({
             typeID,
@@ -222,8 +229,8 @@ exports.getUserList = async (req, res) => {
             displayName,
             avatar,
             studentId: _id,
-            city: cityData,
-            district: districtData,
+            city,
+            district,
             _id: userId
           });
         }
@@ -273,10 +280,27 @@ exports.countUsers = async (req, res) => {
     }
   }
 
+  // get user ids that meet location condition
+  var userList = [];
+  var userIdQuery = {};
+  userIdQuery['$or'] = [];
+  Object.keys(location).forEach(key => {
+    const orCondition = { city: ObjectId(key) };
+    const queryInDistricts = {};
+    queryInDistricts['$in'] = [];
+    for (districtId of location[key].districtList) {
+      queryInDistricts['$in'].push(ObjectId(districtId));
+    }
+    orCondition['district'] = queryInDistricts;
+    userIdQuery['$or'].push(orCondition);
+  });
+  if (userIdQuery['$or'].length > 0) {
+    userList = await User.find(userIdQuery);
+  }
+
   // build query
   var query = {};
   query['salary'] = { $gte: fromSalary, $lte: toSalary };
-  query['$or'] = [];
 
   if (tagList.length > 0) {
     const queryInTags = {};
@@ -287,19 +311,13 @@ exports.countUsers = async (req, res) => {
     query['tags._id'] = queryInTags;
   }
 
-  Object.keys(location).forEach(key => {
-    const orCondition = { city: ObjectId(key) };
-    const queryInDistricts = {};
-    queryInDistricts['$in'] = [];
-    for (districtId of location[key].districtList) {
-      queryInDistricts['$in'].push(ObjectId(districtId));
+  if (userList.length > 0) {
+    const queryInUserIds = {};
+    queryInUserIds['$in'] = [];
+    for (user of userList) {
+      queryInUserIds['$in'].push(ObjectId(user._id));
     }
-    orCondition['district'] = queryInDistricts;
-    query['$or'].push(orCondition);
-  });
-
-  if (query['$or'].length === 0) {
-    delete query['$or'];
+    query['userId'] = queryInUserIds;
   }
 
   if (typeId === UserTypes.TEACHER) {
@@ -328,9 +346,11 @@ exports.countUsers = async (req, res) => {
 };
 
 exports.getUserInfo = (req, res) => {
-  var userId = req.query.id || '';
+  var userId = req.params.id || '';
 
   User.findById({ _id: ObjectId(userId) })
+    .populate('city')
+    .populate('district')
     .then(user => {
       if (user) {
         if (user.typeID === UserTypes.TEACHER) {
@@ -338,14 +358,14 @@ exports.getUserInfo = (req, res) => {
             .then(teacherData => {
               Contract.find({
                 teacherId: ObjectId(user._id),
-                status: { $ne: ContractTypes.NOT_START }
+                status: ContractTypes.IS_COMPLETED_BY_ADMIN
               })
                 .then(async contractsData => {
                   var contracts = [];
                   for (data of contractsData) {
                     // get comment of contract
                     const commentData = await Comment.find({
-                      contractId: ObjectId(data._id)
+                      contract: ObjectId(data._id)
                     });
 
                     // get contract
@@ -410,10 +430,6 @@ exports.getUserInfo = (req, res) => {
                     userId
                   } = teacherData[0];
 
-                  const cityData = await City.findOne({ _id: ObjectId(city) });
-                  const districtData = await District.findOne({
-                    _id: ObjectId(district)
-                  });
                   const formatSalary = formatCostHelper(
                     salary.toString() + '000'
                   );
@@ -436,8 +452,8 @@ exports.getUserInfo = (req, res) => {
                       displayName,
                       avatar,
                       teacherId: _id,
-                      city: cityData,
-                      district: districtData,
+                      city,
+                      district,
                       salary,
                       formatSalary,
                       about,
@@ -473,7 +489,7 @@ exports.getUserInfo = (req, res) => {
                   for (data of contractsData) {
                     // get comment of contract
                     const commentData = await Comment.find({
-                      contractId: ObjectId(data._id)
+                      contract: ObjectId(data._id)
                     });
 
                     // get contract
@@ -520,15 +536,13 @@ exports.getUserInfo = (req, res) => {
                     isActive,
                     email,
                     displayName,
-                    avatar
+                    avatar,
+                    city,
+                    district
                   } = user;
 
                   // get student
-                  const { _id, city, district, userId } = studentData[0];
-                  const cityData = await City.findOne({ _id: ObjectId(city) });
-                  const districtData = await District.findOne({
-                    _id: ObjectId(district)
-                  });
+                  const { _id, userId } = studentData[0];
 
                   res.status(200).send({
                     user: {
@@ -539,8 +553,8 @@ exports.getUserInfo = (req, res) => {
                       displayName,
                       avatar,
                       studentId: _id,
-                      city: cityData,
-                      district: districtData,
+                      city,
+                      district,
                       _id: userId,
                       contracts
                     }

@@ -5,7 +5,6 @@ const userController = require('../controllers/user.controller');
 const userUtils = require('../utils/user.utils');
 const EUserType = require('../enums/EUserTypes');
 
-
 // Retrieve all user
 app.get('/user', userController.getUserList);
 app.get(
@@ -17,7 +16,7 @@ app.get(
 );
 app.post('/user/register', userController.register);
 app.post('/user/login', userController.login); //login with email and password
-app.get('/user/info', userController.getUserInfo);
+app.get('/user/info/:id', userController.getUserInfo);
 app.get('/user/quantity', userController.countUsers);
 
 /**
@@ -51,12 +50,16 @@ app.post(
   userController.verifyTokenResetPassword
 );
 app.post('/user/reset-password', userController.resetPassword);
-app.post('/user/change-password', 
-  passport.authenticate('jwt', { session: false }), 
-  userController.changePassword);
-// student update info
-app.post('/user/update-avatar',
+app.post(
+  '/user/change-password',
   passport.authenticate('jwt', { session: false }),
-  userController.updateAvatar);
+  userController.changePassword
+);
+// student update info
+app.post(
+  '/user/update-avatar',
+  passport.authenticate('jwt', { session: false }),
+  userController.updateAvatar
+);
 
 module.exports = app;
