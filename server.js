@@ -12,7 +12,7 @@ const locationRouter = require('./app/routes/location.route');
 const contractRouter = require('./app/routes/contract.route');
 const cityRouter = require('./app/routes/city.route');
 const districtRouter = require('./app/routes/district.route');
-const chatRouter = require ('./app/routes/chat.route');
+const chatRouter = require('./app/routes/chat.route');
 const notificationRouter = require('./app/routes/notification.route');
 
 const cors = require('cors');
@@ -79,67 +79,72 @@ var server = app.listen(parseInt(process.env.PORT) || 4500, () => {
   console.log('Server is listening on port 4500');
 });
 
-
 // chat using soket.io
 // const socketio = require('socket.io');
-const chatUtils = require ('./app/utils/chat.utils');
-const constant = require ('./config/constant');
+const chatUtils = require('./app/utils/chat.utils');
+const constant = require('./config/constant');
 var io = require('socket.io').listen(server);
 /**
  * Config socket io for chat
  */
-io.on('connect', (socket) => {
+io.on('connect', socket => {
   socket.on('join', async ({ userId, typeID }, callback) => {
-    chatUtils.addUserToActiveList({userId, socketId: socket.id});
+    chatUtils.addUserToActiveList({ userId, socketId: socket.id });
     socket.join(userId); // to send notification
 
     // TODO
     const rooms = await chatUtils.getRoomChatForUser(userId, typeID);
     // console.log("get rooms: ", rooms)
     if (rooms) {
-      rooms.map(item =>{
-        const {room , teacher, student} = item;
+      rooms.map(item => {
+        const { room, teacher, student } = item;
         socket.join(item.room); // to send message chat
         // to system send notification when roomate is off
-        chatUtils.addRoomToActiveArr({room, members: [student._id.toString(), teacher._id.toString()]}) 
-      })
+        chatUtils.addRoomToActiveArr({
+          room,
+          members: [student._id.toString(), teacher._id.toString()]
+        });
+      });
     }
     if (callback) {
-      callback({rooms});
+      callback({ rooms });
     }
   });
 
   // user create a new room => join user to new room
   socket.on(constant.SOCKET_ON_OPEN_ROOM, (payload, callback) => {
-    console.log ("create new room: ", payload)
-      const { student, teacher, room,} = payload;
+    console.log('create new room: ', payload);
+    const { student, teacher, room } = payload;
     socket.join(room);
     // send request create new room to roomate
-    io.to(teacher).emit(constant.SOCKET_EMIT_OPEN_ROOM, {room });
+    io.to(teacher).emit(constant.SOCKET_EMIT_OPEN_ROOM, { room });
     // *NOTE: members[0]: student, member[1]: teacher
     // chatUtils.createRoom({room, members: [student, teacher]})
 
     if (callback) {
-      callback(); 
+      callback();
     }
-  })
+  });
 
   // user accept new room and request server to join user to that new room
   socket.on(constant.SOCKET_ON_ACCEPT_NEW_ROOM, (payload, callback) => {
-    console.log("server accept room: \n", payload)
-    const {isAccept, room } = payload;
+    console.log('server accept room: \n', payload);
+    const { isAccept, room } = payload;
     socket.join(room);
-    
+
     if (callback) {
       callback();
     }
-  })
+  });
 
   socket.on(constant.SOCKET_ON_RECIEVE_MESSAGE, async (payload, callback) => {
-    console.log("my payload: ", payload)
-    const {room, from, time, message} = payload;
+    console.log('my payload: ', payload);
+    const { room, from, time, message } = payload;
     // save msg to db
-    const {error} = await chatUtils.saveMessage({room, newMessage: {content: message, from, time}});
+    const { error } = await chatUtils.saveMessage({
+      room,
+      newMessage: { content: message, from, time }
+    });
     if (!error) {
       // send message to all member in room
       io.in(room).emit(constant.SOCKET_EMIT_SEND_MESSAGE, {
@@ -149,14 +154,14 @@ io.on('connect', (socket) => {
         time
       });
     }
-    
-    if (callback){
+
+    if (callback) {
       callback();
     }
-  })
+  });
 
   socket.on('disconnect', () => {
-    console.log("on disconnect: ", socket.id);
+    console.log('on disconnect: ', socket.id);
     const result = chatUtils.removeUser(socket.id);
 
     if (result) {
@@ -166,19 +171,18 @@ io.on('connect', (socket) => {
         roomSendNotification.map(item => {
           // send message: roomate was offline
           //sending to all clients except sender
-          console.log("room off: ", item)
-          socket.broadcast.to(item.room).emit(constant.SOCKET_EMIT_ROOMATE_OFF, 
-            { room: item.room,
-            userLeft: userId })
+          console.log('room off: ', item);
+          socket.broadcast
+            .to(item.room)
+            .emit(constant.SOCKET_EMIT_ROOMATE_OFF, {
+              room: item.room,
+              userLeft: userId
+            });
           // io.to(room).emit(constant.SOCKET_EMIT_ROOMATE_OFF, {room});
-        })
+        });
       }
     }
-
-
-  })
+  });
 });
-
-
 
 module.exports = app;
