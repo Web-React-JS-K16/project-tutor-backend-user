@@ -8,6 +8,7 @@ const UserTypes = require('../enums/EUserTypes');
 const ContractTypes = require('../enums/EContractTypes');
 const DefaultValues = require('../utils/default-values.utils');
 const formatCostHelper = require('../helpers/format-cost.helper');
+const paymentUtils = require('../utils/payment.utils');
 
 // Retrieving and return all contracts
 exports.getContractList = (req, res) => {
@@ -463,3 +464,33 @@ exports.test = async (req, res) => {
     { $set: { status: ContractTypes.IS_VALID } }
   );
 };
+
+
+exports.afterPayment = async (req, res) => {
+  console.log("after payment");
+};
+
+const stripe = require("stripe")("sk_test_dqIlz6bjhuSeinyYEoCStwjy00q2DMnRHT");
+exports.testPay =  async (req, res) => {
+  const { stripeToken, amount } = req.body
+  console.log("req.body: ", req.body)
+  // console.log("req.body: ", req.body)
+  try {
+    let result = await stripe.charges.create({
+      amount: amount,
+      currency: "vnd",
+      description: "An example charge 111",
+      // source: {token: stripeToken}
+      source: stripeToken
+    });
+
+    console.log("result: ", result);
+
+    const { status } = result;
+
+    res.json({ status });
+  } catch (err) {
+    console.log(err);
+    res.status(500).end();
+  }
+}

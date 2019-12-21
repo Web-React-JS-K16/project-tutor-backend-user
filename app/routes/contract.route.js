@@ -55,6 +55,18 @@ app.put(
   contractController.ratingContract
 );
 
-// app.test('/contract/set/:id',
+// app.test('/contract/test',
 //   contractController.set);
+
+
+
+app.get('/payment/',
+  contractController.testPay);
+app.post('/contract/payment/notify',
+  contractController.afterPayment);
+
+
+
+// const stripe = require("stripe")("sk_test_dqIlz6bjhuSeinyYEoCStwjy00q2DMnRHT");
+app.post("/contract/charge", contractController.testPay);
 module.exports = app;
