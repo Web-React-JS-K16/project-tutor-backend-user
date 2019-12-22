@@ -9,6 +9,8 @@ const ContractTypes = require('../enums/EContractTypes');
 const DefaultValues = require('../utils/default-values.utils');
 const formatCostHelper = require('../helpers/format-cost.helper');
 const paymentUtils = require('../utils/payment.utils');
+const EContractTypes = require('../enums/EContractTypes');  
+
 
 // Retrieving and return all contracts
 exports.getContractList = (req, res) => {
@@ -189,11 +191,16 @@ exports.getContract = async (req, res) => {
         })
           .populate('city')
           .populate('district');
-
-        if (
-          contract.teacherId._id.toString() === user._id.toString() ||
-          contract.studentId._id.toString() === user._id.toString()
-        ) {
+        
+          
+          if (
+            contract.teacherId._id.toString() === user._id.toString() ||
+            contract.studentId._id.toString() === user._id.toString()
+            ) {
+              // teacher cannot see contract detail when status contract is WAIT_FOR_PAY_MENT
+              if (user.typeID === UserTypes.TEACHER && contract.status === ContractTypes.WAIT_FOR_PAYMENT){
+                return res.status(400).send({ message: 'Bạn không có quyền truy cập' });
+              }
           // get comment of contract
           const commentData = await Comment.find({
             contract: ObjectId(contract._id)
@@ -457,40 +464,70 @@ exports.ratingContract = async (req, res) => {
   }
 };
 
-exports.test = async (req, res) => {
-  const { id } = req.params;
-  await Contract.updateOne(
-    { _id: ObjectId(id) },
-    { $set: { status: ContractTypes.IS_VALID } }
-  );
-};
+// exports.test = async (req, res) => {
+//   const { id } = req.params;
+//   await Contract.updateOne(
+//     { _id: ObjectId(id) },
+//     { $set: { status: ContractTypes.IS_VALID } }
+//   );
+// };
 
 
-exports.afterPayment = async (req, res) => {
-  console.log("after payment");
-};
-
+/**
+ * Student charge contract (payment)
+ */
 const stripe = require("stripe")("sk_test_dqIlz6bjhuSeinyYEoCStwjy00q2DMnRHT");
-exports.testPay =  async (req, res) => {
-  const { stripeToken, amount } = req.body
-  console.log("req.body: ", req.body)
-  // console.log("req.body: ", req.body)
+exports.chargeContract =  async (req, res) => {
+  const { stripeToken, amount, contractId } = req.body
   try {
+    const contract = await Contract.findOne({_id: ObjectId(contractId)});
+    const { teacherId, status, costPerHour, workingHour, name } = contract;
+    
+    if (status != EContractTypes.WAIT_FOR_PAYMENT) {
+      return res.status(400).send({ message: 'Hợp đồng đã được thanh toán trước đó' });
+    }
+
+    if (amount !== costPerHour * workingHour* 1000) {
+      return res.status(400).send({ message: 'Số tiền không đúng. Vui lòng thử lại' });
+    }
+
     let result = await stripe.charges.create({
       amount: amount,
       currency: "vnd",
-      description: "An example charge 111",
-      // source: {token: stripeToken}
+      description: "",
       source: stripeToken
     });
+    if (result.status === 'succeeded') {
+      // update db
+      await Contract.updateOne({_id: ObjectId(contractId) }, 
+        {$set: {status: EContractTypes.WAIT_FOR_ACCEPTANCE}}
+       )
+      await Contract.updateOne({ _id: ObjectId(contractId) },
+        { $push: { statusHistory: { time: new Date(), status: EContractTypes.WAIT_FOR_ACCEPTANCE } } }
+      )
+       // send notification
+      const notification = new Notification({
+        userId: teacherId,
+         content: `Bạn có 1 hợp đồng ${name} mới.`,
+        link: `/contract-detail/${contractId}`})
+        await notification.save();
 
-    console.log("result: ", result);
-
-    const { status } = result;
-
-    res.json({ status });
+      return res.status(200).send({ message: 'Thanh toán thành công' });
+    } else {
+      return res.status(400).send({ message: 'Thanh toán thất bại' });
+    }
   } catch (err) {
     console.log(err);
     res.status(500).end();
   }
 }
+
+// exports.testContract = async (req, res) => {
+//   console.log("on test contract")
+//   await Contract.updateOne(
+//     { _id: ObjectId('5df10a84e7c6b8f83eda3984') },
+//     { $set: { status: EContractTypes.WAIT_FOR_ACCEPTANCE } },
+//     { $push: { statusHistory: { time: new Date(), status: EContractTypes.WAIT_FOR_ACCEPTANCE } } }
+//   );
+//       return res.status(400).send({ message: 'Thanh toán thất bại' });
+// };
