@@ -10,7 +10,7 @@ app.get('/contract', contractController.getContractList);
 app.get('/contract/quantity', contractController.countContracts);
 // get contract detail
 app.get(
-  '/contract/:id',
+  '/contract/get-detail/:id',
   passport.authenticate('jwt', { session: false }),
   contractController.getContract
 );
@@ -55,6 +55,16 @@ app.put(
   contractController.ratingContract
 );
 
-// app.test('/contract/set/:id',
+// app.test('/contract/test',
 //   contractController.set);
+
+app.post("/contract/charge", 
+  passport.authenticate('jwt', { session: false }),
+  userUtils.checkRole(EUserType.STUDENT),
+  contractController.chargeContract);
+
+// app.get('/contract/12345',
+//   contractController.testContract);
+
+
 module.exports = app;
