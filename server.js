@@ -25,7 +25,7 @@ app.use(cors());
 //   res.header('Access-Control-Allow-Origin', '*');
 //   next();
 // });
-app.use(require("body-parser").text());
+app.use(require('body-parser').text());
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
