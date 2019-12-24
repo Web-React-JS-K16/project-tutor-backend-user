@@ -119,7 +119,7 @@ function getDates(fromDate, toDate) {
 
 exports.getStatisticalData = (req, res) => {
   var userId = req.params.userId || '';
-  var type = req.query.type || 'month';
+  var type = req.query.type || 'date';
   var monthObj = req.query.monthObj || {
     start: { month: 0, year: 2019 },
     end: { month: 11, year: 2019 }
@@ -142,47 +142,55 @@ exports.getStatisticalData = (req, res) => {
         .then(contracts => {
           var data = [];
           if (type === 'date') {
-            fromDate = new Date(fromDate);
-            toDate = new Date(toDate);
-            fromDate.setHours(0);
-            fromDate.setMinutes(0);
-            fromDate.setSeconds(0);
-            fromDate.setMilliseconds(0);
-            toDate.setHours(0);
-            toDate.setMinutes(0);
-            toDate.setSeconds(0);
-            toDate.setMilliseconds(0);
-            data = getDates(fromDate, toDate);
+            const startDate = new Date(parseInt(fromDate));
+            const endDate = new Date(parseInt(toDate));
+            startDate.setHours(0);
+            startDate.setMinutes(0);
+            startDate.setSeconds(0);
+            startDate.setMilliseconds(0);
+            endDate.setHours(0);
+            endDate.setMinutes(0);
+            endDate.setSeconds(0);
+            endDate.setMilliseconds(0);
+            data = getDates(startDate, endDate);
+            console.log('data ', data);
           } else if (type === 'week') {
-            for (let i = weekObj.start.week; i <= weekObj.end.week; i++) {
-              data.push({ week: i, year: weekObj.start.year, value: 0 });
+            const startWeek = parseInt(weekObj.start.week);
+            const endWeek = parseInt(weekObj.end.week);
+            const year = parseInt(weekObj.start.year);
+            for (let i = startWeek; i <= endWeek; i++) {
+              data.push({ week: i, year: year, value: 0 });
             }
+            console.log('data ', data);
           } else if (type === 'month') {
-            if (monthObj.start.year !== monthObj.end.year) {
-              for (let i = monthObj.start.month; i < 12; i++) {
-                data.push({ month: i, year: monthObj.start.year, value: 0 });
+            console.log(monthObj);
+            const startMonth = parseInt(monthObj.start.month);
+            const endMonth = parseInt(monthObj.end.month);
+            const startYear = parseInt(monthObj.start.year);
+            const endYear = parseInt(monthObj.end.year);
+            if (startYear !== endYear) {
+              for (let i = startMonth; i < 12; i++) {
+                data.push({ month: i, year: startYear, value: 0 });
               }
-              for (
-                let j = monthObj.start.year + 1;
-                j < monthObj.end.year;
-                j++
-              ) {
+              for (let j = startYear + 1; j < endYear; j++) {
                 for (let i = 0; i < 12; i++) {
                   data.push({ month: i, year: j, value: 0 });
                 }
               }
-              for (let i = 0; i <= monthObj.end.month; i++) {
-                data.push({ month: i, year: monthObj.end.year, value: 0 });
+              for (let i = 0; i <= endMonth; i++) {
+                data.push({ month: i, year: endYear, value: 0 });
               }
             } else {
-              for (let i = monthObj.start.month; i <= monthObj.end.month; i++) {
-                data.push({ month: i, year: monthObj.start.year, value: 0 });
+              for (let i = startMonth; i <= endMonth; i++) {
+                data.push({ month: i, year: startYear, value: 0 });
               }
             }
+            console.log('data ', data);
           } else if (type === 'year') {
-            for (let i = fromYear; i <= toYear; i++) {
+            for (let i = parseInt(fromYear); i <= parseInt(toYear); i++) {
               data.push({ year: i, value: 0 });
             }
+            console.log('data ', data);
           }
 
           for (contract of contracts) {
@@ -233,10 +241,12 @@ exports.getStatisticalData = (req, res) => {
                   element.month === endDateFormat.getMonth() &&
                   element.year === endDateFormat.getFullYear()
               );
-              data[dataIndex].value +=
-                parseInt(workingHour) *
-                parseFloat(costPerHour.toString()) *
-                1000;
+              if (dataIndex > -1) {
+                data[dataIndex].value +=
+                  parseInt(workingHour) *
+                  parseFloat(costPerHour.toString()) *
+                  1000;
+              }
             } else if (type === 'year') {
               let dataIndex = data.findIndex(
                 element => element.year === endDateFormat.getFullYear()
