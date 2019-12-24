@@ -499,6 +499,12 @@ exports.chargeContract =  async (req, res) => {
     });
     if (result.status === 'succeeded') {
       // update db
+      //TODO
+      // await Contract.findOneAndUpdate({ _id: ObjectId(contractId) },
+      //   { status: EContractTypes.WAIT_FOR_ACCEPTANCE},
+      //    { $push: { statusHistory: { time: new Date(), status: EContractTypes.WAIT_FOR_ACCEPTANCE } } }
+      // )
+      
       await Contract.updateOne({_id: ObjectId(contractId) }, 
         {$set: {status: EContractTypes.WAIT_FOR_ACCEPTANCE}}
        )
