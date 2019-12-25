@@ -169,6 +169,145 @@ exports.countContracts = async (req, res) => {
     });
 };
 
+exports.getContractListForTeacherPage = (req, res) => {
+  var userId = req.query.userId || '';
+  var pageNumber = req.query.page || DefaultValues.pageNumber;
+  var itemPerPage = req.query.limit || DefaultValues.itemPerPage;
+
+  if (isNaN(pageNumber) || pageNumber < 1) {
+    pageNumber = DefaultValues.pageNumber;
+  } else {
+    pageNumber = parseInt(pageNumber);
+  }
+  if (isNaN(itemPerPage) || itemPerPage < 1) {
+    itemPerPage = DefaultValues.itemPerPage;
+  } else {
+    itemPerPage = parseInt(itemPerPage);
+  }
+
+  User.findById({ _id: ObjectId(userId) })
+    .then(async user => {
+      if (user) {
+        if (user.typeID === UserTypes.TEACHER) {
+          Contract.find({
+            teacherId: ObjectId(user._id),
+            status: {
+              $in: [
+                ContractTypes.IS_CANCELLED,
+                ContractTypes.IS_COMPLETED_BY_ADMIN
+              ]
+            }
+          })
+            .skip(itemPerPage * (pageNumber - 1))
+            .limit(itemPerPage)
+            .then(async contractsData => {
+              var contracts = [];
+              for (data of contractsData) {
+                // get comment of contract
+                const commentData = await Comment.find({
+                  contract: ObjectId(data._id)
+                });
+
+                // get contract
+                const {
+                  _id,
+                  name,
+                  status,
+                  isPaid,
+                  content,
+                  teacherId,
+                  studentId,
+                  startDate,
+                  endDate,
+                  costPerHour,
+                  workingHour
+                } = data;
+                let formatCostPerHour = formatCostHelper(
+                  costPerHour.toString() + '000'
+                );
+                let formatCost = formatCostHelper(
+                  (parseInt(costPerHour.toString()) * workingHour).toString() +
+                    '000'
+                );
+                contracts.push({
+                  _id,
+                  name,
+                  status,
+                  isPaid,
+                  content,
+                  teacherId,
+                  studentId,
+                  startDate,
+                  endDate,
+                  costPerHour: formatCostPerHour,
+                  cost: formatCost,
+                  workingHour,
+                  comment: commentData[0]
+                });
+              }
+              res.status(200).send({
+                payload: contracts
+              });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              res.status(500).send({
+                message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+              });
+            });
+        }
+      } else {
+        return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+      }
+    })
+    .catch(err => {
+      console.log('error: ', err.message);
+      res.status(500).send({
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      });
+    });
+};
+
+exports.countContractsForTeacherPage = async (req, res) => {
+  var userId = req.query.userId || '';
+
+  User.findById({ _id: ObjectId(userId) })
+    .then(async user => {
+      if (user) {
+        if (user.typeID === UserTypes.TEACHER) {
+          Contract.countDocuments({
+            teacherId: ObjectId(user._id),
+            status: {
+              $in: [
+                ContractTypes.IS_CANCELLED,
+                ContractTypes.IS_COMPLETED_BY_ADMIN
+              ]
+            }
+          })
+            .then(quantity => {
+              res.status(200).send({
+                payload: quantity
+              });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              res.status(500).send({
+                message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+              });
+            });
+        }
+      } else {
+        return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+      }
+    })
+    .catch(err => {
+      console.log('error: ', err.message);
+      res.status(500).send({
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      });
+    });
+};
+
 /**
  * body: {_id} is contract's id
  */
@@ -296,19 +435,12 @@ exports.sendReport = async (req, res) => {
       report.contract = contractId;
       await report.save();
 
+      // *Note: not updat status, admin will do it
       // update contract status -> IS_CANCELLED
-      await Contract.updateOne(
-        { _id: ObjectId(contractId) },
-        {
-          status: EContractTypes.IS_CANCELLED,
-          $push: {
-            statusHistory: {
-              time: new Date(),
-              status: EContractTypes.IS_CANCELLED
-            }
-          }
-        }
-      );
+      // await Contract.updateOne({_id: ObjectId(contractId)}, {
+      //   status: EContractTypes.IS_CANCELLED,
+      //   $push: { statusHistory: { time: new Date(), status: EContractTypes.IS_CANCELLED }}
+      // })
 
       return res
         .status(200)
@@ -551,13 +683,10 @@ exports.updateRatingContract = async (req, res) => {
       );
       if (contract) {
         // update comment + ratings
-        const oldCommnet = await Comment.findOne({
-          contract: ObjectId(id),
-          ratings: { $gt: 0 }
-        });
-
-        if (ratings > 0 && ratings !== oldCommnet.ratings) {
-          // only update rating when rating > 0 and different old ratings
+        const oldCommnet = await Comment.findOne({ contract: ObjectId(id), ratings: { $gt: 0 } });
+        
+        // only update rating when rating > 0 and (oldComment not exist ||  different old ratings )
+        if (ratings > 0 && (!oldCommnet || ratings !== oldCommnet.ratings)){ 
           // update rating for teacher
           const newRating = await contractUtils.getUpdatedRating(
             ratings,
@@ -735,16 +864,11 @@ exports.createTest = async (req, res) => {
 
 const City = require('../models/city.model');
 const District = require('../models/district.model');
-exports.deleteAll = async (req, res) => {
-  //   await Contract.deleteMany();
-  // //  const rs = await Contract.findOne({ _id: ObjectId("5ded185f8322f87848918afe")});
 
-  // await Notification.deleteMany();
-  //   // return res.status(500).send({ isSuccess: false });
-  const data = req.body;
-  data.map(async item => {
-    const x = new District(item);
-    await x.save();
-  });
+exports.deleteAll = async (req, res) => {
+
+  await Teacher.updateMany({about: null}, {
+  about: "Là giáo viên có nhiều năm kinh nghiệm."
+  })
   return res.status(200).send({ isSuccess: false });
 };

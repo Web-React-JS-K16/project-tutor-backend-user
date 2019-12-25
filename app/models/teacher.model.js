@@ -3,7 +3,10 @@ const mongoose = require('mongoose');
 const TeacherSchema = mongoose.Schema(
   {
     salary: { type: mongoose.Schema.Types.Decimal128, default: 0 },
-    about: String,
+    about: {
+      type: String,
+      index: true
+    },
     successRate: { type: Number, default: 0 },
     ratings: { type: Number, default: 0 },
     tags: [

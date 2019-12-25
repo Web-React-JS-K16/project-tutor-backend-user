@@ -281,6 +281,118 @@ exports.getStatisticalData = (req, res) => {
     });
 };
 
+/**
+ * body: {keyword}
+ */
+exports.searchTeacher = async (req, res) => {
+  try {
+    const { keyword } = req.params;
+    // const keyword = 'đại số 10'
+    console.log("keyword: ", keyword)
+
+    const result = await Teacher.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $lookup: {
+          from: "cities",
+          localField: "user.city",
+          foreignField: "_id",
+          as: "city"
+        }
+      },
+      {
+        $lookup: {
+          from: "districts",
+          localField: "user.district",
+          foreignField: "_id",
+          as: "district"
+        }
+      },
+      { $unwind: '$tags' },
+      {
+        $lookup: {
+          from: "tags",
+          localField: "tags._id",
+          foreignField: "_id",
+          as: "tags"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$city",
+          "preserveNullAndEmptyArrays": true
+        }
+      },
+      {
+        $unwind: {
+          path: "$district",
+          "preserveNullAndEmptyArrays": true
+        }
+      },
+      {
+        $unwind: {
+          path: "$tags",
+          "preserveNullAndEmptyArrays": true
+        }
+      },
+
+
+      {
+        $match: {
+          $or: [
+            { "tags.name": { $regex: keyword, $options: 'i' } },
+            { "user.displayName": { $regex: keyword, $options: 'i' } },
+            { "city.name": { $regex: keyword, $options: 'i' } },
+            { "district.name": { $regex: keyword, $options: 'i' } },
+            { about: { $regex: keyword, $options: 'i' } }
+          ]
+        }
+
+      },
+      {
+        $group:
+        {
+          _id: "$user._id"
+        }
+      },
+    ])
+    // get arr id
+    const idResult = result.map(item => ObjectId(item._id[0]));
+    // get data
+    const payload = await Teacher.find({ userId: { $in: idResult } })
+      .populate('tags._id')
+      .populate({
+        path: 'userId',
+        select: ["-password", "-passwordHash"],
+        populate: [{
+          path: 'city'
+        }, {
+          path: 'district'
+        }]
+      })
+
+    return res.status(200).send({
+      message: 'Cập nhật thông tin thành công.',
+      count: result.length,
+      result: idResult,
+      payload
+    });
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(500)
+      .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
+  }
+}
+
 exports.getStatisticalDataHome = async (req, res) => {
   try {
     const data = await Contract.aggregate([
@@ -343,7 +455,7 @@ exports.getStatisticalDataHome = async (req, res) => {
         },
       },
       { $sort: { total: -1 } },
-      { $limit: 10},
+      { $limit: 10 },
       {
         $project: {
           "user._id": 1,
