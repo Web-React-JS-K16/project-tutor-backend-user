@@ -296,19 +296,12 @@ exports.sendReport = async (req, res) => {
       report.contract = contractId;
       await report.save();
 
+      // *Note: not updat status, admin will do it
       // update contract status -> IS_CANCELLED
-      await Contract.updateOne(
-        { _id: ObjectId(contractId) },
-        {
-          status: EContractTypes.IS_CANCELLED,
-          $push: {
-            statusHistory: {
-              time: new Date(),
-              status: EContractTypes.IS_CANCELLED
-            }
-          }
-        }
-      );
+      // await Contract.updateOne({_id: ObjectId(contractId)}, {
+      //   status: EContractTypes.IS_CANCELLED,
+      //   $push: { statusHistory: { time: new Date(), status: EContractTypes.IS_CANCELLED }}
+      // })
 
       return res
         .status(200)
@@ -551,13 +544,10 @@ exports.updateRatingContract = async (req, res) => {
       );
       if (contract) {
         // update comment + ratings
-        const oldCommnet = await Comment.findOne({
-          contract: ObjectId(id),
-          ratings: { $gt: 0 }
-        });
-
-        if (ratings > 0 && ratings !== oldCommnet.ratings) {
-          // only update rating when rating > 0 and different old ratings
+        const oldCommnet = await Comment.findOne({ contract: ObjectId(id), ratings: { $gt: 0 } });
+        
+        // only update rating when rating > 0 and (oldComment not exist ||  different old ratings )
+        if (ratings > 0 && (!oldCommnet || ratings !== oldCommnet.ratings)){ 
           // update rating for teacher
           const newRating = await contractUtils.getUpdatedRating(
             ratings,
@@ -735,16 +725,11 @@ exports.createTest = async (req, res) => {
 
 const City = require('../models/city.model');
 const District = require('../models/district.model');
-exports.deleteAll = async (req, res) => {
-  //   await Contract.deleteMany();
-  // //  const rs = await Contract.findOne({ _id: ObjectId("5ded185f8322f87848918afe")});
 
-  // await Notification.deleteMany();
-  //   // return res.status(500).send({ isSuccess: false });
-  const data = req.body;
-  data.map(async item => {
-    const x = new District(item);
-    await x.save();
-  });
+exports.deleteAll = async (req, res) => {
+
+  await Teacher.updateMany({about: null}, {
+  about: "Là giáo viên có nhiều năm kinh nghiệm."
+  })
   return res.status(200).send({ isSuccess: false });
 };

@@ -20,6 +20,7 @@ app.post(
   teacherController.updateInfoTeacher
 );
 app.get('/teacher/statistics/:userId', teacherController.getStatisticalData);
-app.get('/teacher/statistics', teacherController.getStatisticalData);
+app.get('/teacher/search/:keyword', teacherController.searchTeacher);
+
 
 module.exports = app;
