@@ -688,14 +688,15 @@ exports.login = (req, res) => {
         });
       }
       // generate a signed son web token with the contents of user object and return it in the response
-      const { email, displayName, avatar, _id, typeID } = user;
+      const { _doc: { passwordHash, password, ...userInfo}, ...otherInfo} = user;
       const token = jwt.sign(
-        { email, displayName, avatar, _id, typeID },
+        { ...userInfo },
         jwtSecretConfig.jwtSecret
       );
+      console.log("other info: ", userInfo)
       return res
         .status(200)
-        .json({ user: { email, displayName, avatar, _id, token, typeID } });
+        .json({ user: { token, ...userInfo } });
     });
   })(req, res);
 };

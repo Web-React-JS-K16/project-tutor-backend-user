@@ -34,11 +34,19 @@ const ContractSchema = mongoose.Schema(
       // default: new Date()
     },
     costPerHour: { type: mongoose.Schema.Types.Decimal128, default: 0 },
-    workingHour: { type: Number, default: 0 }
+    workingHour: { type: Number, default: 0 },
+    tags: [
+      {
+        _id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Tag'
+        }
+      }
+    ]
   },
   {
     timestamps: true
-  }
+  },
 );
 
 module.exports = mongoose.model('Contract', ContractSchema);
