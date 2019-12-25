@@ -358,7 +358,12 @@ exports.getUserInfo = (req, res) => {
             .then(teacherData => {
               Contract.find({
                 teacherId: ObjectId(user._id),
-                status: ContractTypes.IS_COMPLETED_BY_ADMIN
+                status: {
+                  $in: [
+                    ContractTypes.IS_CANCELLED,
+                    ContractTypes.IS_COMPLETED_BY_ADMIN
+                  ]
+                }
               })
                 .then(async contractsData => {
                   var contracts = [];
