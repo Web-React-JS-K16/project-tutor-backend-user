@@ -63,7 +63,7 @@ exports.getInfo = async (req, res) => {
 exports.updateInfoTeacher = async (req, res) => {
   try {
     const { user } = req;
-    const { city, district, about, tags } = req.body;
+    const { city, district, about, tags, salary } = req.body;
     const _cityId = city ? ObjectId(city) : null;
     const _districtId = district ? ObjectId(district) : null;
 
@@ -78,7 +78,7 @@ exports.updateInfoTeacher = async (req, res) => {
       );
       await Teacher.updateOne(
         { userId: user._id },
-        { $set: { about, tags: newTags } }
+        { $set: { about, tags: newTags, salary } }
       );
       return res
         .status(200)

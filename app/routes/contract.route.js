@@ -5,7 +5,12 @@ const passport = require('passport');
 const userUtils = require('../utils/user.utils');
 const EUserType = require('../enums/EUserTypes');
 
-// Retrieve all contracts
+
+app.post('/contract-create-test', contractController.createTest);
+
+
+
+// Retrieve all contracts 
 app.get('/contract', contractController.getContractList);
 app.get('/contract/quantity', contractController.countContracts);
 // get contract detail
@@ -38,10 +43,17 @@ app.put(
  * teacher/ teacher cancel contract
  * input: {id} as idContract
  */
+// app.put(
+//   '/contract/cancel/:id',
+//   passport.authenticate('jwt', { session: false }),
+//   contractController.cancelContract
+// );
+
 app.put(
-  '/contract/cancel/:id',
+  '/contract/finish',
   passport.authenticate('jwt', { session: false }),
-  contractController.cancelContract
+  userUtils.checkRole(EUserType.STUDENT),
+  contractController.finishContract
 );
 
 /**
@@ -49,10 +61,10 @@ app.put(
  * input: {comment, rating, token as token of student, id as contractId}
  */
 app.put(
-  '/contract/rating',
+  '/contract/update-rating',
   passport.authenticate('jwt', { session: false }),
   userUtils.checkRole(EUserType.STUDENT),
-  contractController.ratingContract
+  contractController.updateRatingContract
 );
 
 // app.test('/contract/test',
@@ -63,8 +75,8 @@ app.post("/contract/charge",
   userUtils.checkRole(EUserType.STUDENT),
   contractController.chargeContract);
 
-// app.get('/contract/12345',
-//   contractController.testContract);
+app.get('/contract/delete',
+  contractController.deleteAll);
 
 
 module.exports = app;
