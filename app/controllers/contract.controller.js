@@ -169,6 +169,145 @@ exports.countContracts = async (req, res) => {
     });
 };
 
+exports.getContractListForTeacherPage = (req, res) => {
+  var userId = req.query.userId || '';
+  var pageNumber = req.query.page || DefaultValues.pageNumber;
+  var itemPerPage = req.query.limit || DefaultValues.itemPerPage;
+
+  if (isNaN(pageNumber) || pageNumber < 1) {
+    pageNumber = DefaultValues.pageNumber;
+  } else {
+    pageNumber = parseInt(pageNumber);
+  }
+  if (isNaN(itemPerPage) || itemPerPage < 1) {
+    itemPerPage = DefaultValues.itemPerPage;
+  } else {
+    itemPerPage = parseInt(itemPerPage);
+  }
+
+  User.findById({ _id: ObjectId(userId) })
+    .then(async user => {
+      if (user) {
+        if (user.typeID === UserTypes.TEACHER) {
+          Contract.find({
+            teacherId: ObjectId(user._id),
+            status: {
+              $in: [
+                ContractTypes.IS_CANCELLED,
+                ContractTypes.IS_COMPLETED_BY_ADMIN
+              ]
+            }
+          })
+            .skip(itemPerPage * (pageNumber - 1))
+            .limit(itemPerPage)
+            .then(async contractsData => {
+              var contracts = [];
+              for (data of contractsData) {
+                // get comment of contract
+                const commentData = await Comment.find({
+                  contract: ObjectId(data._id)
+                });
+
+                // get contract
+                const {
+                  _id,
+                  name,
+                  status,
+                  isPaid,
+                  content,
+                  teacherId,
+                  studentId,
+                  startDate,
+                  endDate,
+                  costPerHour,
+                  workingHour
+                } = data;
+                let formatCostPerHour = formatCostHelper(
+                  costPerHour.toString() + '000'
+                );
+                let formatCost = formatCostHelper(
+                  (parseInt(costPerHour.toString()) * workingHour).toString() +
+                    '000'
+                );
+                contracts.push({
+                  _id,
+                  name,
+                  status,
+                  isPaid,
+                  content,
+                  teacherId,
+                  studentId,
+                  startDate,
+                  endDate,
+                  costPerHour: formatCostPerHour,
+                  cost: formatCost,
+                  workingHour,
+                  comment: commentData[0]
+                });
+              }
+              res.status(200).send({
+                payload: contracts
+              });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              res.status(500).send({
+                message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+              });
+            });
+        }
+      } else {
+        return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+      }
+    })
+    .catch(err => {
+      console.log('error: ', err.message);
+      res.status(500).send({
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      });
+    });
+};
+
+exports.countContractsForTeacherPage = async (req, res) => {
+  var userId = req.query.userId || '';
+
+  User.findById({ _id: ObjectId(userId) })
+    .then(async user => {
+      if (user) {
+        if (user.typeID === UserTypes.TEACHER) {
+          Contract.countDocuments({
+            teacherId: ObjectId(user._id),
+            status: {
+              $in: [
+                ContractTypes.IS_CANCELLED,
+                ContractTypes.IS_COMPLETED_BY_ADMIN
+              ]
+            }
+          })
+            .then(quantity => {
+              res.status(200).send({
+                payload: quantity
+              });
+            })
+            .catch(err => {
+              console.log('error: ', err.message);
+              res.status(500).send({
+                message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+              });
+            });
+        }
+      } else {
+        return res.status(400).send({ message: 'Tài khoản không tồn tại.' });
+      }
+    })
+    .catch(err => {
+      console.log('error: ', err.message);
+      res.status(500).send({
+        message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+      });
+    });
+};
+
 /**
  * body: {_id} is contract's id
  */
