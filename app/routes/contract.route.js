@@ -75,7 +75,7 @@ app.post("/contract/charge",
   userUtils.checkRole(EUserType.STUDENT),
   contractController.chargeContract);
 
-app.get('/contract/delete',
+app.get('/contract/test',
   contractController.deleteAll);
 
 

@@ -26,7 +26,7 @@ exports.getSumJobRatedForTeacher = async (teacherId) => {
             }    
         }
     ])
-    console.log("result: ", result);
+    console.log("result count: ", result.length);
     return result.length;
 }
 
@@ -42,7 +42,7 @@ exports.getUpdatedRating = async ( newContractRating, teacherId, contractId ) =>
     let newRating = oldEverageRating;
     if (oldCommnet) {
         const oldContractRating = oldCommnet.ratings;
-        newRating = ((oldEverageRating * sumJob - oldContractRating) + updatedContractRating) / sumJobRated;
+        newRating = ((oldEverageRating * sumJobRated - oldContractRating) + newContractRating) / sumJobRated;
         
     } else {
         newRating = ((oldEverageRating * sumJobRated + newContractRating) / (sumJobRated + 1))
