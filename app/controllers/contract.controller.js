@@ -11,9 +11,8 @@ const DefaultValues = require('../utils/default-values.utils');
 const formatCostHelper = require('../helpers/format-cost.helper');
 const paymentUtils = require('../utils/payment.utils');
 const contractUtils = require('../utils/contract.utils');
-const EContractTypes = require('../enums/EContractTypes');  
+const EContractTypes = require('../enums/EContractTypes');
 const ISODate = require('mongodb').ISODate;
-
 
 // Retrieving and return all contracts
 exports.getContractList = (req, res) => {
@@ -194,18 +193,22 @@ exports.getContract = async (req, res) => {
         })
           .populate('city')
           .populate('district');
-        
-          
+
+        if (
+          contract.teacherId._id.toString() === user._id.toString() ||
+          contract.studentId._id.toString() === user._id.toString()
+        ) {
+          // teacher cannot see contract detail when status contract is WAIT_FOR_PAY_MENT
           if (
-            contract.teacherId._id.toString() === user._id.toString() ||
-            contract.studentId._id.toString() === user._id.toString()
-            ) {
-              // teacher cannot see contract detail when status contract is WAIT_FOR_PAY_MENT
-              if (user.typeID === UserTypes.TEACHER && contract.status === ContractTypes.WAIT_FOR_PAYMENT){
-                return res.status(400).send({ message: 'Bạn không có quyền truy cập' });
-              }
+            user.typeID === UserTypes.TEACHER &&
+            contract.status === ContractTypes.WAIT_FOR_PAYMENT
+          ) {
+            return res
+              .status(400)
+              .send({ message: 'Bạn không có quyền truy cập' });
+          }
           // get comment of contract
-          console.log("contract id: ", contract._id)
+          console.log('contract id: ', contract._id);
           const commentData = await Comment.findOne({
             contract: ObjectId(contract._id)
           });
@@ -253,9 +256,14 @@ exports.getContract = async (req, res) => {
 };
 
 exports.createContract = (req, res) => {
-  const { studentId, teacherId } = req.body;
+  const { studentId, teacherId, tags } = req.body;
 
   if (studentId && teacherId) {
+    const contractTags = tags.map(tagId => {
+      return { _id: ObjectId(tagId) };
+    });
+    req.body.tags = contractTags;
+
     const newContract = new Contract(req.body);
     newContract
       .save()
@@ -289,10 +297,18 @@ exports.sendReport = async (req, res) => {
       await report.save();
 
       // update contract status -> IS_CANCELLED
-      await Contract.updateOne({_id: ObjectId(contractId)}, {
-        status: EContractTypes.IS_CANCELLED,
-        $push: { statusHistory: { time: new Date(), status: EContractTypes.IS_CANCELLED }}
-      })
+      await Contract.updateOne(
+        { _id: ObjectId(contractId) },
+        {
+          status: EContractTypes.IS_CANCELLED,
+          $push: {
+            statusHistory: {
+              time: new Date(),
+              status: EContractTypes.IS_CANCELLED
+            }
+          }
+        }
+      );
 
       return res
         .status(200)
@@ -425,46 +441,62 @@ exports.cancelContract = async (req, res) => {
   }
 };
 
-
 /**
  * Student finish contract
  */
 exports.finishContract = async (req, res) => {
   try {
-    console.log("req.body: ", req.body)
-    const { contractId, comment: { content, ratings }} = req.body;
+    console.log('req.body: ', req.body);
+    const {
+      contractId,
+      comment: { content, ratings }
+    } = req.body;
     const { user } = req;
     if (user) {
-      const contract = await Contract.findById(ObjectId(contractId))
-      .populate('studentId')
-        // .populate('teacherId');
-        
+      const contract = await Contract.findById(ObjectId(contractId)).populate(
+        'studentId'
+      );
+      // .populate('teacherId');
+
       if (contract) {
         // update teacher: jobs, workHour, (ratings) + comment
         if (ratings > 0) {
-          const newRating = await contractUtils.getUpdatedRating(ratings, contract.teacherId, contractId);
-          console.log("before update")
-          console.log("contract.teacherId:  ", contract.teacherId);
-          console.log("contract.teacherId:  ", +newRating);
-          console.log("contract.teacherId:  ", contract.teacherId);
-          await Teacher.findOneAndUpdate({userId: ObjectId(contract.teacherId)}, {
-           ratings: +newRating,
-            $inc: { hoursWorked: +contract.workingHour, jobs: 1} 
-          })
-          console.log("after update")
+          const newRating = await contractUtils.getUpdatedRating(
+            ratings,
+            contract.teacherId,
+            contractId
+          );
+          console.log('before update');
+          console.log('contract.teacherId:  ', contract.teacherId);
+          console.log('contract.teacherId:  ', +newRating);
+          console.log('contract.teacherId:  ', contract.teacherId);
+          await Teacher.findOneAndUpdate(
+            { userId: ObjectId(contract.teacherId) },
+            {
+              ratings: +newRating,
+              $inc: { hoursWorked: +contract.workingHour, jobs: 1 }
+            }
+          );
+          console.log('after update');
 
-          const newComment = new Comment({ content, ratings, contract: ObjectId(contractId)})
+          const newComment = new Comment({
+            content,
+            ratings,
+            contract: ObjectId(contractId)
+          });
           await newComment.save();
-
         } else {
-          await Teacher.updateOne({ _id: ObjectId(contract.teacherId) }, {
-            $inc: { hoursWorked: contract.workingHour, jobs: 1 }
-          })
-            if (content){
-              const newComment = new Comment({ content, ratings: 0 })
-              await newComment.save();
-            } 
-      }
+          await Teacher.updateOne(
+            { _id: ObjectId(contract.teacherId) },
+            {
+              $inc: { hoursWorked: contract.workingHour, jobs: 1 }
+            }
+          );
+          if (content) {
+            const newComment = new Comment({ content, ratings: 0 });
+            await newComment.save();
+          }
+        }
         // create new notification to teacher
         const notification = new Notification();
         // send notification for teacher
@@ -474,13 +506,21 @@ exports.finishContract = async (req, res) => {
         await notification.save();
 
         // update contract status
-        await Contract.updateOne({ _id: ObjectId(contractId) }, {
-          status: EContractTypes.IS_COMPLETED_BY_STUDENT,
-          $push: {
-            statusHistory: { time: new Date(), status: EContractTypes.IS_COMPLETED_BY_STUDENT }
+        await Contract.updateOne(
+          { _id: ObjectId(contractId) },
+          {
+            status: EContractTypes.IS_COMPLETED_BY_STUDENT,
+            $push: {
+              statusHistory: {
+                time: new Date(),
+                status: EContractTypes.IS_COMPLETED_BY_STUDENT
+              }
+            }
           }
-        })
-        return res.status(200).send({ message: 'Cập nhật trạng thái hợp đồng thành công' });
+        );
+        return res
+          .status(200)
+          .send({ message: 'Cập nhật trạng thái hợp đồng thành công' });
       } else {
         return res.status(400).send({ message: 'Hợp đồng không tồn tại' });
       }
@@ -497,7 +537,6 @@ exports.finishContract = async (req, res) => {
   }
 };
 
-
 /**
  * Student comment and rate contract
  * input: {comment, rating, token as token of student, id as contractId}
@@ -512,19 +551,29 @@ exports.updateRatingContract = async (req, res) => {
       );
       if (contract) {
         // update comment + ratings
-        const oldCommnet = await Comment.findOne({ contract: ObjectId(id), ratings: { $gt: 0 } });
-        
+        const oldCommnet = await Comment.findOne({
+          contract: ObjectId(id),
+          ratings: { $gt: 0 }
+        });
 
-        if (ratings > 0 && ratings !== oldCommnet.ratings){ // only update rating when rating > 0 and different old ratings
+        if (ratings > 0 && ratings !== oldCommnet.ratings) {
+          // only update rating when rating > 0 and different old ratings
           // update rating for teacher
-          const newRating =  await contractUtils.getUpdatedRating(ratings, contract.teacherId, id);
-          
+          const newRating = await contractUtils.getUpdatedRating(
+            ratings,
+            contract.teacherId,
+            id
+          );
+
           // update teacher's ratings
-          await Teacher.updateOne({userId: contract.teacherId}, {
-            $set: {
-              ratings: newRating
+          await Teacher.updateOne(
+            { userId: contract.teacherId },
+            {
+              $set: {
+                ratings: newRating
+              }
             }
-          })
+          );
           // update new comment
           await Comment.updateOne(
             { contract: ObjectId(id) },
@@ -533,10 +582,10 @@ exports.updateRatingContract = async (req, res) => {
         } else {
           await Comment.updateOne(
             { contract: ObjectId(id) },
-            { $set: { content, date: new Date()  } }
+            { $set: { content, date: new Date() } }
           );
         }
-        
+
         // create new notification to student
         const notification = new Notification();
         // send notification for teacher
@@ -545,9 +594,7 @@ exports.updateRatingContract = async (req, res) => {
         notification.content = `${contract.studentId.displayName} đã cập nhật đánh giá và bình luận cho hợp đồng ${contract.name}.`;
         await notification.save();
 
-        return res
-          .status(200)
-          .send({ message: 'Thêm đánh giá thành công'});
+        return res.status(200).send({ message: 'Thêm đánh giá thành công' });
       } else {
         return res.status(400).send({ message: 'Hợp đồng không tồn tại' });
       }
@@ -572,29 +619,32 @@ exports.updateRatingContract = async (req, res) => {
 //   );
 // };
 
-
 /**
  * Student charge contract (payment)
  */
-const stripe = require("stripe")("sk_test_dqIlz6bjhuSeinyYEoCStwjy00q2DMnRHT");
-exports.chargeContract =  async (req, res) => {
-  const { stripeToken, amount, contractId } = req.body
+const stripe = require('stripe')('sk_test_dqIlz6bjhuSeinyYEoCStwjy00q2DMnRHT');
+exports.chargeContract = async (req, res) => {
+  const { stripeToken, amount, contractId } = req.body;
   try {
-    const contract = await Contract.findOne({_id: ObjectId(contractId)});
+    const contract = await Contract.findOne({ _id: ObjectId(contractId) });
     const { teacherId, status, costPerHour, workingHour, name } = contract;
-    
+
     if (status != EContractTypes.WAIT_FOR_PAYMENT) {
-      return res.status(400).send({ message: 'Hợp đồng đã được thanh toán trước đó' });
+      return res
+        .status(400)
+        .send({ message: 'Hợp đồng đã được thanh toán trước đó' });
     }
 
-    if (amount !== costPerHour * workingHour* 1000) {
-      return res.status(400).send({ message: 'Số tiền không đúng. Vui lòng thử lại' });
+    if (amount !== costPerHour * workingHour * 1000) {
+      return res
+        .status(400)
+        .send({ message: 'Số tiền không đúng. Vui lòng thử lại' });
     }
 
     let result = await stripe.charges.create({
       amount: amount,
-      currency: "vnd",
-      description: "",
+      currency: 'vnd',
+      description: '',
       source: stripeToken
     });
     if (result.status === 'succeeded') {
@@ -604,19 +654,29 @@ exports.chargeContract =  async (req, res) => {
       //    status: EContractTypes.WAIT_FOR_ACCEPTANCE,
       //    { $push: { statusHistory: { time: new Date(), status: EContractTypes.WAIT_FOR_ACCEPTANCE } } }
       // )
-      
-      await Contract.updateOne({_id: ObjectId(contractId) }, 
-        {$set: {status: EContractTypes.WAIT_FOR_ACCEPTANCE}}
-       )
-      await Contract.updateOne({ _id: ObjectId(contractId) },
-        { $push: { statusHistory: { time: new Date(), status: EContractTypes.WAIT_FOR_ACCEPTANCE } } }
-      )
-       // send notification
+
+      await Contract.updateOne(
+        { _id: ObjectId(contractId) },
+        { $set: { status: EContractTypes.WAIT_FOR_ACCEPTANCE } }
+      );
+      await Contract.updateOne(
+        { _id: ObjectId(contractId) },
+        {
+          $push: {
+            statusHistory: {
+              time: new Date(),
+              status: EContractTypes.WAIT_FOR_ACCEPTANCE
+            }
+          }
+        }
+      );
+      // send notification
       const notification = new Notification({
         userId: teacherId,
-         content: `Bạn có 1 hợp đồng ${name} mới.`,
-        link: `/contract-detail/${contractId}`})
-        await notification.save();
+        content: `Bạn có 1 hợp đồng ${name} mới.`,
+        link: `/contract-detail/${contractId}`
+      });
+      await notification.save();
 
       return res.status(200).send({ message: 'Thanh toán thành công' });
     } else {
@@ -626,7 +686,7 @@ exports.chargeContract =  async (req, res) => {
     console.log(err);
     res.status(500).end();
   }
-}
+};
 
 // exports.testContract = async (req, res) => {
 //   console.log("on test contract")
@@ -637,7 +697,6 @@ exports.chargeContract =  async (req, res) => {
 //   );
 //       return res.status(400).send({ message: 'Thanh toán thất bại' });
 // };
-
 
 exports.createTest = async (req, res) => {
   // console.log("on test")
@@ -652,7 +711,7 @@ exports.createTest = async (req, res) => {
 
   let payload = [];
   await data.map(async item => {
-    console.log("item: ", item);
+    console.log('item: ', item);
     const { tags } = item;
     const newTags = tags.map(item => {
       const _id = item;
@@ -666,34 +725,26 @@ exports.createTest = async (req, res) => {
     await rs.save();
     // console.log("on push: ", rs);
     payload.push(rs);
-
-  })
+  });
 
   const count = await Contract.countDocuments();
 
-  
-
   return res.status(200).send({ isSuccess: false, count });
   // return res.status(500).send({ isSuccess: false });
-
 };
-
-
 
 const City = require('../models/city.model');
 const District = require('../models/district.model');
 exports.deleteAll = async (req, res) => {
-//   await Contract.deleteMany();
-// //  const rs = await Contract.findOne({ _id: ObjectId("5ded185f8322f87848918afe")});
+  //   await Contract.deleteMany();
+  // //  const rs = await Contract.findOne({ _id: ObjectId("5ded185f8322f87848918afe")});
 
-
-// await Notification.deleteMany();
-//   // return res.status(500).send({ isSuccess: false });
-const data = req.body;
-data.map(async item =>{
-  const x = new District(item);
-  await x.save();
-})
+  // await Notification.deleteMany();
+  //   // return res.status(500).send({ isSuccess: false });
+  const data = req.body;
+  data.map(async item => {
+    const x = new District(item);
+    await x.save();
+  });
   return res.status(200).send({ isSuccess: false });
-
 };
