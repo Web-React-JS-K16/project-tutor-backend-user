@@ -448,129 +448,65 @@ exports.getUserInfo = (req, res) => {
       if (user) {
         if (user.typeID === UserTypes.TEACHER) {
           Teacher.find({ userId: ObjectId(user._id) })
-            .then(teacherData => {
-              Contract.find({
-                teacherId: ObjectId(user._id),
-                status: {
-                  $in: [
-                    ContractTypes.IS_CANCELLED,
-                    ContractTypes.IS_COMPLETED_BY_ADMIN
-                  ]
+            .then(async teacherData => {
+              // get user
+              const {
+                typeID,
+                isBlock,
+                isActive,
+                email,
+                displayName,
+                avatar,
+                city,
+                district
+              } = user;
+
+              // get teacher
+              const {
+                _id,
+                salary,
+                about,
+                successRate,
+                ratings,
+                tags,
+                jobs,
+                hoursWorked,
+                userId
+              } = teacherData[0];
+
+              const formatSalary = formatCostHelper(salary.toString() + '000');
+
+              // get tag
+              const tagList = [];
+              for (tag of tags) {
+                const tagData = await Tag.findById({
+                  _id: ObjectId(tag._id)
+                }).populate('majorId');
+                tagList.push(tagData);
+              }
+
+              res.status(200).send({
+                user: {
+                  typeID,
+                  isBlock,
+                  isActive,
+                  email,
+                  displayName,
+                  avatar,
+                  teacherId: _id,
+                  city,
+                  district,
+                  salary,
+                  formatSalary,
+                  about,
+                  successRate,
+                  ratings,
+                  tags: tagList,
+                  jobs,
+                  hoursWorked,
+                  _id: userId
                 }
-              })
-                .then(async contractsData => {
-                  var contracts = [];
-                  for (data of contractsData) {
-                    // get comment of contract
-                    const commentData = await Comment.find({
-                      contract: ObjectId(data._id)
-                    });
-
-                    // get contract
-                    const {
-                      name,
-                      status,
-                      isPaid,
-                      content,
-                      teacherId,
-                      studentId,
-                      startDate,
-                      endDate,
-                      costPerHour,
-                      workingHour
-                    } = data;
-                    let formatCostPerHour = formatCostHelper(
-                      costPerHour.toString() + '000'
-                    );
-                    let formatCost = formatCostHelper(
-                      (
-                        parseInt(costPerHour.toString()) * workingHour
-                      ).toString() + '000'
-                    );
-                    contracts.push({
-                      name,
-                      status,
-                      isPaid,
-                      content,
-                      teacherId,
-                      studentId,
-                      startDate,
-                      endDate,
-                      costPerHour: formatCostPerHour,
-                      cost: formatCost,
-                      workingHour,
-                      comment: commentData[0]
-                    });
-                  }
-
-                  // get user
-                  const {
-                    typeID,
-                    isBlock,
-                    isActive,
-                    email,
-                    displayName,
-                    avatar,
-                    city,
-                    district
-                  } = user;
-
-                  // get teacher
-                  const {
-                    _id,
-                    salary,
-                    about,
-                    successRate,
-                    ratings,
-                    tags,
-                    jobs,
-                    hoursWorked,
-                    userId
-                  } = teacherData[0];
-
-                  const formatSalary = formatCostHelper(
-                    salary.toString() + '000'
-                  );
-
-                  // get tag
-                  const tagList = [];
-                  for (tag of tags) {
-                    const tagData = await Tag.findById({
-                      _id: ObjectId(tag._id)
-                    }).populate('majorId');
-                    tagList.push(tagData);
-                  }
-
-                  res.status(200).send({
-                    user: {
-                      typeID,
-                      isBlock,
-                      isActive,
-                      email,
-                      displayName,
-                      avatar,
-                      teacherId: _id,
-                      city,
-                      district,
-                      salary,
-                      formatSalary,
-                      about,
-                      successRate,
-                      ratings,
-                      tags: tagList,
-                      jobs,
-                      hoursWorked,
-                      _id: userId,
-                      contracts
-                    }
-                  });
-                })
-                .catch(err => {
-                  console.log('error: ', err.message);
-                  res.status(500).send({
-                    message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
-                  });
-                });
+              });
             })
             .catch(err => {
               console.log('error: ', err.message);
