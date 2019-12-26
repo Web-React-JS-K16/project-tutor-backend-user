@@ -462,7 +462,7 @@ exports.getStatisticalDataHome = async (req, res) => {
           "user.displayName": 1,
           "tag": 1,
           "teacher.successRate": 1,
-          "teacher.rating": 1,
+          "teacher.ratings": 1,
           "teacher.salary": 1,
           "user.phone": 1,
           "city.name": 1,
