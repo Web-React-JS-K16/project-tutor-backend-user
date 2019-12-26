@@ -848,6 +848,7 @@ exports.createTest = async (req, res) => {
     });
 
     const startDate = new Date(item.statusHistory[0].time.toString());
+    // const startDate = 
 
     // console.log("enddate: ", endDate)
     const rs = await new Contract({ ...item, startDate, tags: newTags });
@@ -870,8 +871,9 @@ exports.deleteAll = async (req, res) => {
   // await Teacher.updateMany({about: null}, {
   // about: "Là giáo viên có nhiều năm kinh nghiệm."
   // })
-  const a = new Contract(req.body);
+  const tag = ObjectId(req.body.tags[0]._id)
+  const a = new Contract({...req.body, tags: [{_id: tag}]});
   await a.save();
-  
-  return res.status(200).send({ isSuccess: false });
+
+  return res.status(200).send({ isSuccess: false, a });
 };
