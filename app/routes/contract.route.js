@@ -84,7 +84,7 @@ app.post(
   contractController.chargeContract
 );
 
-app.get('/contract/test', contractController.deleteAll);
+app.get('/contract/test', contractController.createTest);
 
 app.get('/contract/delete', contractController.deleteAll);
 
