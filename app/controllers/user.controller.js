@@ -30,222 +30,315 @@ exports.getUserList = async (req, res) => {
   var toSalary = req.query.toSalary || DefaultValues.toSalary;
   var majors = req.query.majors || DefaultValues.majors;
   var location = req.query.location || DefaultValues.location;
-  // var orderBy = req.query.orderBy || '';
-  var orderType = req.query.orderType || 'ASC';
+  // console.log("location: ", location)
 
-  if (orderType === 'ASC') {
-    orderType = 1;
-  } else {
-    orderType = -1;
+  const city = Object.keys(location);
+  const cityArr  = city.map(item => ObjectId(item));
+  
+  let district = [];
+  for (let key in location) {
+    district = [...district, ...location[key].districtList];
   }
-  if (isNaN(typeId) || typeId < 0) {
-    typeId = DefaultValues.typeId;
-  } else {
-    typeId = parseInt(typeId);
-  }
-  if (isNaN(pageNumber) || pageNumber < 1) {
-    pageNumber = DefaultValues.pageNumber;
-  } else {
-    pageNumber = parseInt(pageNumber);
-  }
-  if (isNaN(itemPerPage) || itemPerPage < 1) {
-    itemPerPage = DefaultValues.itemPerPage;
-  } else {
-    itemPerPage = parseInt(itemPerPage);
-  }
-  if (isNaN(fromSalary) || fromSalary < 0) {
-    fromSalary = DefaultValues.fromSalary;
-  } else {
-    fromSalary = parseFloat(fromSalary);
-  }
-  if (isNaN(toSalary) || toSalary < 0) {
-    toSalary = DefaultValues.toSalary;
-  } else {
-    toSalary = parseFloat(toSalary);
-  }
+  const districtArr =  district.map(item => ObjectId(item));
 
-  // get tags by majorId
-  var tagList = [];
-  if (majors.length !== 0) {
-    for (majorId of majors) {
-      const tags = await Tag.find({ majorId: ObjectId(majorId) });
-      tagList = tagList.concat(tags);
-    }
-  }
+  // console.log("type: ", typeId);
+  // console.log("city: ", city);
+  // console.log("district: ", districtArr)
+  const majorIdArr = majors.map(item => ObjectId(item))
+  console.log(majors)
+  let objectQuery ={}
+   objectQuery["tags.marjorId"] = majors === DefaultValues.majors ? null : { $in: majorIdArr }
+   objectQuery.city = (!city || city.length === 0) ? null : { $in: cityArr }
+  objectQuery.district = (!district || district.length === 0) ? null : { $in: districtArr }
+  
+  // const objectQuery = {
+  //   "tags.marjorId": tagsCondition
+  // }
 
-  // get user ids that meet location condition
-  var userList = [];
-  var userIdQuery = {};
-  userIdQuery['$or'] = [];
-  Object.keys(location).forEach(key => {
-    const orCondition = { city: ObjectId(key) };
-    const queryInDistricts = {};
-    queryInDistricts['$in'] = [];
-    for (districtId of location[key].districtList) {
-      queryInDistricts['$in'].push(ObjectId(districtId));
-    }
-    orCondition['district'] = queryInDistricts;
-    userIdQuery['$or'].push(orCondition);
-  });
-  if (userIdQuery['$or'].length > 0) {
-    userList = await User.find(userIdQuery);
-  }
+  console.log("dis cond: ", objectQuery)
+  if (typeId.toString() === UserTypes.TEACHER.toString()) {
+    console.log("is teacher")
+    // const result = await Teacher.find({
 
-  // build query
-  var query = {};
+    //     salary: { $gte: +fromSalary, $lte: +toSalary },
+    //     tagsCondition
 
-  query['salary'] = { $gte: fromSalary, $lte: toSalary };
+    // }
+    // ).sort({ _id: 1 }).limit(parseInt(itemPerPage)).skip(parseInt((pageNumber - 1) * itemPerPage))
 
-  if (tagList.length > 0) {
-    const queryInTags = {};
-    queryInTags['$in'] = [];
-    for (tag of tagList) {
-      queryInTags['$in'].push(ObjectId(tag._id));
-    }
-    query['tags._id'] = queryInTags;
-  }
-
-  if (userList.length > 0) {
-    const queryInUserIds = {};
-    queryInUserIds['$in'] = [];
-    for (user of userList) {
-      queryInUserIds['$in'].push(ObjectId(user._id));
-    }
-    query['userId'] = queryInUserIds;
-  }
-
-  if (typeId === UserTypes.TEACHER) {
-    Teacher.find(query)
-      .sort({
-        salary: orderType
-      })
-      .skip(itemPerPage * (pageNumber - 1))
-      .limit(itemPerPage)
-      .then(async teachers => {
-        var teacherList = [];
-        for (teacher of teachers) {
-          const user = await User.find({ _id: ObjectId(teacher.userId._id) })
-            .populate('city')
-            .populate('district');
-
-          // get user
-          const {
-            typeID,
-            isBlock,
-            isActive,
-            email,
-            displayName,
-            avatar,
-            city,
-            district
-          } = user[0];
-
-          // get teacher
-          const {
-            _id,
-            salary,
-            about,
-            successRate,
-            ratings,
-            tags,
-            jobs,
-            hoursWorked,
-            userId
-          } = teacher;
-
-          // get tag
-          const tagList = [];
-          for (tag of tags) {
-            const tagData = await Tag.findById({
-              _id: ObjectId(tag._id)
-            }).populate('majorId');
-            tagList.push(tagData);
-          }
-
-          let formatSalary = formatCostHelper(salary.toString() + '000');
-          teacherList.push({
-            typeID,
-            isBlock,
-            isActive,
-            email,
-            displayName,
-            avatar,
-            teacherId: _id,
-            city,
-            district,
-            salary: formatSalary,
-            about,
-            successRate,
-            ratings,
-            tags: tagList,
-            jobs,
-            hoursWorked,
-            _id: userId
-          });
+    const result = await Teacher.aggregate([
+      { $unwind: '$tags' },
+      {
+        $lookup: {
+          from: "tags",
+          localField: "tags._id",
+          foreignField: "_id",
+          as: "tags"
+        }
+      },
+      {
+        $unwind: {
+          path: "$tags",
+          "preserveNullAndEmptyArrays": true
+        }
+      },
+      {
+        $match: {
+          $and: [
+            {salary: { $gte: +fromSalary, $lte: +toSalary }},
+            objectQuery
+          ]
         }
 
-        res.status(200).send({
-          user: teacherList
-        });
-      })
-      .catch(err => {
-        console.log('error: ', err.message);
-        res.status(500).send({
-          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
-        });
-      });
-  } else if (typeId === UserTypes.STUDENT) {
-    Student.find()
-      .skip(itemPerPage * (pageNumber - 1))
-      .limit(itemPerPage)
-      .then(async students => {
-        var studentList = [];
-
-        for (student of students) {
-          const user = await User.find({ _id: ObjectId(student.userId) })
-            .populate('city')
-            .populate('district');
-
-          // get user
-          const {
-            typeID,
-            isBlock,
-            isActive,
-            email,
-            displayName,
-            avatar,
-            city,
-            district
-          } = user[0];
-
-          // get student
-          const { _id, userId } = student;
-
-          studentList.push({
-            typeID,
-            isBlock,
-            isActive,
-            email,
-            displayName,
-            avatar,
-            studentId: _id,
-            city,
-            district,
-            _id: userId
-          });
+      },
+      {
+        $group:
+        {
+          _id: "$userId"
         }
+      },
+      {
+        $sort: {_id: 1}
+      },
+      {
+        $limit: parseInt(itemPerPage)
+      },
+       {
+        $skip:parseInt(itemPerPage* (pageNumber-1))
+      }
+    ])
 
-        res.status(200).send({
-          user: studentList
-        });
-      })
-      .catch(err => {
-        console.log('error: ', err.message);
-        res.status(500).send({
-          message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
-        });
-      });
+    console.log("result[]: ", JSON.stringify(result.length))
+    res.status(200).json({ teacherList: result, numberOfTeachers: result.length});
+  } else {
+    console.log("not teacher")
+    res.status(400).json({ teacherList: [], numberOfTeachers: 0});
+
   }
+
+
+
+
+
+
+
+
+  // // var orderBy = req.query.orderBy || '';
+  // var orderType = req.query.orderType || 'ASC';
+
+  // if (orderType === 'ASC') {
+  //   orderType = 1;
+  // } else {
+  //   orderType = -1;
+  // }
+  // if (isNaN(typeId) || typeId < 0) {
+  //   typeId = DefaultValues.typeId;
+  // } else {
+  //   typeId = parseInt(typeId);
+  // }
+  // if (isNaN(pageNumber) || pageNumber < 1) {
+  //   pageNumber = DefaultValues.pageNumber;
+  // } else {
+  //   pageNumber = parseInt(pageNumber);
+  // }
+  // if (isNaN(itemPerPage) || itemPerPage < 1) {
+  //   itemPerPage = DefaultValues.itemPerPage;
+  // } else {
+  //   itemPerPage = parseInt(itemPerPage);
+  // }
+  // if (isNaN(fromSalary) || fromSalary < 0) {
+  //   fromSalary = DefaultValues.fromSalary;
+  // } else {
+  //   fromSalary = parseFloat(fromSalary);
+  // }
+  // if (isNaN(toSalary) || toSalary < 0) {
+  //   toSalary = DefaultValues.toSalary;
+  // } else {
+  //   toSalary = parseFloat(toSalary);
+  // }
+
+  // // get tags by majorId
+  // var tagList = [];
+  // if (majors.length !== 0) {
+  //   for (majorId of majors) {
+  //     const tags = await Tag.find({ majorId: ObjectId(majorId) });
+  //     tagList = tagList.concat(tags);
+  //   }
+  // }
+
+  // // get user ids that meet location condition
+  // var userList = [];
+  // var userIdQuery = {};
+  // userIdQuery['$or'] = [];
+  // Object.keys(location).forEach(key => {
+  //   const orCondition = { city: ObjectId(key) };
+  //   const queryInDistricts = {};
+  //   queryInDistricts['$in'] = [];
+  //   for (districtId of location[key].districtList) {
+  //     queryInDistricts['$in'].push(ObjectId(districtId));
+  //   }
+  //   orCondition['district'] = queryInDistricts;
+  //   userIdQuery['$or'].push(orCondition);
+  // });
+  // if (userIdQuery['$or'].length > 0) {
+  //   userList = await User.find(userIdQuery);
+  // }
+
+  // // build query
+  // var query = {};
+
+  // query['salary'] = { $gte: fromSalary, $lte: toSalary };
+
+  // if (tagList.length > 0) {
+  //   const queryInTags = {};
+  //   queryInTags['$in'] = [];
+  //   for (tag of tagList) {
+  //     queryInTags['$in'].push(ObjectId(tag._id));
+  //   }
+  //   query['tags._id'] = queryInTags;
+  // }
+
+  // if (userList.length > 0) {
+  //   const queryInUserIds = {};
+  //   queryInUserIds['$in'] = [];
+  //   for (user of userList) {
+  //     queryInUserIds['$in'].push(ObjectId(user._id));
+  //   }
+  //   query['userId'] = queryInUserIds;
+  // }
+
+  // if (typeId === UserTypes.TEACHER) {
+  //   Teacher.find(query)
+  //     .sort({
+  //       salary: orderType
+  //     })
+  //     .skip(itemPerPage * (pageNumber - 1))
+  //     .limit(itemPerPage)
+  //     .then(async teachers => {
+  //       var teacherList = [];
+  //       for (teacher of teachers) {
+  //         const user = await User.find({ _id: ObjectId(teacher.userId._id) })
+  //           .populate('city')
+  //           .populate('district');
+
+  //         // get user
+  //         const {
+  //           typeID,
+  //           isBlock,
+  //           isActive,
+  //           email,
+  //           displayName,
+  //           avatar,
+  //           city,
+  //           district
+  //         } = user[0];
+
+  //         // get teacher
+  //         const {
+  //           _id,
+  //           salary,
+  //           about,
+  //           successRate,
+  //           ratings,
+  //           tags,
+  //           jobs,
+  //           hoursWorked,
+  //           userId
+  //         } = teacher;
+
+  //         // get tag
+  //         const tagList = [];
+  //         for (tag of tags) {
+  //           const tagData = await Tag.findById({
+  //             _id: ObjectId(tag._id)
+  //           }).populate('majorId');
+  //           tagList.push(tagData);
+  //         }
+
+  //         let formatSalary = formatCostHelper(salary.toString() + '000');
+  //         teacherList.push({
+  //           typeID,
+  //           isBlock,
+  //           isActive,
+  //           email,
+  //           displayName,
+  //           avatar,
+  //           teacherId: _id,
+  //           city,
+  //           district,
+  //           salary: formatSalary,
+  //           about,
+  //           successRate,
+  //           ratings,
+  //           tags: tagList,
+  //           jobs,
+  //           hoursWorked,
+  //           _id: userId
+  //         });
+  //       }
+
+  //       res.status(200).send({
+  //         user: teacherList
+  //       });
+  //     })
+  //     .catch(err => {
+  //       console.log('error: ', err.message);
+  //       res.status(500).send({
+  //         message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+  //       });
+  //     });
+  // } else if (typeId === UserTypes.STUDENT) {
+  //   Student.find()
+  //     .skip(itemPerPage * (pageNumber - 1))
+  //     .limit(itemPerPage)
+  //     .then(async students => {
+  //       var studentList = [];
+
+  //       for (student of students) {
+  //         const user = await User.find({ _id: ObjectId(student.userId) })
+  //           .populate('city')
+  //           .populate('district');
+
+  //         // get user
+  //         const {
+  //           typeID,
+  //           isBlock,
+  //           isActive,
+  //           email,
+  //           displayName,
+  //           avatar,
+  //           city,
+  //           district
+  //         } = user[0];
+
+  //         // get student
+  //         const { _id, userId } = student;
+
+  //         studentList.push({
+  //           typeID,
+  //           isBlock,
+  //           isActive,
+  //           email,
+  //           displayName,
+  //           avatar,
+  //           studentId: _id,
+  //           city,
+  //           district,
+  //           _id: userId
+  //         });
+  //       }
+
+  //       res.status(200).send({
+  //         user: studentList
+  //       });
+  //     })
+  //     .catch(err => {
+  //       console.log('error: ', err.message);
+  //       res.status(500).send({
+  //         message: 'Đã có lỗi xảy ra, vui lòng thử lại!'
+  //       });
+  //     });
+  // }
 };
 
 exports.countUsers = async (req, res) => {
@@ -688,7 +781,7 @@ exports.login = (req, res) => {
         });
       }
       // generate a signed son web token with the contents of user object and return it in the response
-      const { _doc: { passwordHash, password, ...userInfo}, ...otherInfo} = user;
+      const { _doc: { passwordHash, password, ...userInfo }, ...otherInfo } = user;
       const token = jwt.sign(
         { ...userInfo },
         jwtSecretConfig.jwtSecret
@@ -958,7 +1051,10 @@ exports.changePassword = async (req, res) => {
     console.log('user: ', user);
     if (user) {
       // check old password
-      if (user.validatePassword(oldPassword)) {
+      // find old passwordHash
+      const userData = await User.findOne({ _id: ObjectId(user._id) });
+
+      if (bcrypt.compareSync(oldPassword, userData.passwordHash)) {
         const newPassword = bcrypt.hashSync(password, saltRounds);
         await User.updateOne(
           { _id: user._id },
