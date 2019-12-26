@@ -30,104 +30,6 @@ exports.getUserList = async (req, res) => {
   var toSalary = req.query.toSalary || DefaultValues.toSalary;
   var majors = req.query.majors || DefaultValues.majors;
   var location = req.query.location || DefaultValues.location;
-  // console.log("location: ", location)
-
-
-
-
-
-
-  // const city = Object.keys(location);
-  // const cityArr  = city.map(item => ObjectId(item));
-  
-  // let district = [];
-  // for (let key in location) {
-  //   district = [...district, ...location[key].districtList];
-  // }
-  // const districtArr =  district.map(item => ObjectId(item));
-
-  // // console.log("type: ", typeId);
-  // // console.log("city: ", city);
-  // // console.log("district: ", districtArr)
-  // const majorIdArr = majors.map(item => ObjectId(item))
-  // console.log(majors)
-  // let objectQuery ={}
-  //  objectQuery["tags.marjorId"] = majors === DefaultValues.majors ? null : { $in: majorIdArr }
-  //  objectQuery.city = (!city || city.length === 0) ? null : { $in: cityArr }
-  // objectQuery.district = (!district || district.length === 0) ? null : { $in: districtArr }
-  
-  // // const objectQuery = {
-  // //   "tags.marjorId": tagsCondition
-  // // }
-
-  // console.log("dis cond: ", objectQuery)
-  // if (typeId.toString() === UserTypes.TEACHER.toString()) {
-  //   console.log("is teacher")
-  //   // const result = await Teacher.find({
-
-  //   //     salary: { $gte: +fromSalary, $lte: +toSalary },
-  //   //     tagsCondition
-
-  //   // }
-  //   // ).sort({ _id: 1 }).limit(parseInt(itemPerPage)).skip(parseInt((pageNumber - 1) * itemPerPage))
-
-  //   const result = await Teacher.aggregate([
-  //     { $unwind: '$tags' },
-  //     {
-  //       $lookup: {
-  //         from: "tags",
-  //         localField: "tags._id",
-  //         foreignField: "_id",
-  //         as: "tags"
-  //       }
-  //     },
-  //     {
-  //       $unwind: {
-  //         path: "$tags",
-  //         "preserveNullAndEmptyArrays": true
-  //       }
-  //     },
-  //     {
-  //       $match: {
-  //         $and: [
-  //           {salary: { $gte: +fromSalary, $lte: +toSalary }},
-  //           objectQuery
-  //         ]
-  //       }
-
-  //     },
-  //     {
-  //       $group:
-  //       {
-  //         _id: "$userId"
-  //       }
-  //     },
-  //     {
-  //       $sort: {_id: 1}
-  //     },
-  //     {
-  //       $limit: parseInt(itemPerPage)
-  //     },
-  //      {
-  //       $skip:parseInt(itemPerPage* (pageNumber-1))
-  //     }
-  //   ])
-
-  //   console.log("result[]: ", JSON.stringify(result.length))
-  //   res.status(200).json({ teacherList: result, numberOfTeachers: result.length});
-  // } else {
-  //   console.log("not teacher")
-  //   res.status(400).json({ teacherList: [], numberOfTeachers: 0});
-
-  // }
-
-
-
-
-
-
-
-
   // var orderBy = req.query.orderBy || '';
   var orderType = req.query.orderType || 'ASC';
 
@@ -161,6 +63,92 @@ exports.getUserList = async (req, res) => {
   } else {
     toSalary = parseFloat(toSalary);
   }
+
+  // const city = Object.keys(location);
+  // const cityArr = city.map(item => ObjectId(item));
+
+  // let district = [];
+  // for (let key in location) {
+  //   district = [...district, ...location[key].districtList];
+  // }
+  // const districtArr = district.map(item => ObjectId(item));
+
+  // // console.log("type: ", typeId);
+  // // console.log("city: ", city);
+  // // console.log("district: ", districtArr)
+  // const majorIdArr = majors.map(item => ObjectId(item));
+  // console.log(majors);
+  // let objectQuery = {};
+  // objectQuery['tags.marjorId'] =
+  //   majors === DefaultValues.majors ? null : { $in: majorIdArr };
+  // objectQuery.city = !city || city.length === 0 ? null : { $in: cityArr };
+  // objectQuery.district =
+  //   !district || district.length === 0 ? null : { $in: districtArr };
+
+  // // const objectQuery = {
+  // //   "tags.marjorId": tagsCondition
+  // // }
+
+  // console.log('dis cond: ', objectQuery);
+  // if (typeId.toString() === UserTypes.TEACHER.toString()) {
+  //   console.log('is teacher');
+  //   // const result = await Teacher.find({
+
+  //   //     salary: { $gte: +fromSalary, $lte: +toSalary },
+  //   //     tagsCondition
+
+  //   // }
+  //   // ).sort({ _id: 1 }).limit(parseInt(itemPerPage)).skip(parseInt((pageNumber - 1) * itemPerPage))
+
+  //   const result = await Teacher.aggregate([
+  //     { $unwind: '$tags' },
+  //     {
+  //       $lookup: {
+  //         from: 'tags',
+  //         localField: 'tags._id',
+  //         foreignField: '_id',
+  //         as: 'tags'
+  //       }
+  //     },
+  //     {
+  //       $unwind: {
+  //         path: '$tags',
+  //         preserveNullAndEmptyArrays: true
+  //       }
+  //     },
+  //     {
+  //       $match: {
+  //         $and: [
+  //           { salary: { $gte: +fromSalary, $lte: +toSalary } },
+  //           objectQuery
+  //         ]
+  //       }
+  //     },
+  //     {
+  //       $group: {
+  //         _id: '$userId'
+  //       }
+  //     },
+  //     {
+  //       $sort: { _id: 1 }
+  //     },
+  //     {
+  //       $limit: parseInt(itemPerPage)
+  //     },
+  //     {
+  //       $skip: parseInt(itemPerPage * (pageNumber - 1))
+  //     }
+  //   ]);
+
+  //   console.log('dddđ', result);
+  //   console.log('result[]: ', JSON.stringify(result.length));
+  //   res
+  //     .status(200)
+  //     .json({ teacherList: result, numberOfTeachers: result.length });
+  // } else {
+  //   console.log('not teacher');
+  //   res.status(400).json({ teacherList: [], numberOfTeachers: 0 });
+  // }
 
   // get tags by majorId
   var tagList = [];
@@ -283,7 +271,7 @@ exports.getUserList = async (req, res) => {
         }
 
         res.status(200).send({
-          user: teacherList
+          payload: teacherList
         });
       })
       .catch(err => {
@@ -334,7 +322,7 @@ exports.getUserList = async (req, res) => {
         }
 
         res.status(200).send({
-          user: studentList
+          payload: studentList
         });
       })
       .catch(err => {
@@ -421,7 +409,7 @@ exports.countUsers = async (req, res) => {
   if (typeId === UserTypes.TEACHER) {
     Teacher.countDocuments(query)
       .then(quantity => {
-        res.status(200).send({ user: quantity });
+        res.status(200).send({ payload: quantity });
       })
       .catch(err => {
         console.log('error: ', err.message);
@@ -432,7 +420,7 @@ exports.countUsers = async (req, res) => {
   } else if (typeId === UserTypes.STUDENT) {
     Student.countDocuments()
       .then(quantity => {
-        res.status(200).send({ user: quantity });
+        res.status(200).send({ payload: quantity });
       })
       .catch(err => {
         console.log('error: ', err.message);
@@ -445,41 +433,50 @@ exports.countUsers = async (req, res) => {
 
 exports.getUserInfo = async (req, res) => {
   var userId = req.params.id || '';
-  console.log("userId: ", userId)
+  console.log('userId: ', userId);
   try {
-   const userInfo = await User.findById({_id: ObjectId(userId)}, {password: 0, passwordHash: 0})
-            .populate('city')
-            .populate('district')
-    if (userInfo){
-      const {typeID} = userInfo;
-      if (typeID === UserTypes.TEACHER){
-        const teacherInfo = await Teacher.findOne({userId: ObjectId(userId)}).populate("tags._id")
-        const formatSalary = formatCostHelper(teacherInfo.salary.toString() + '000');
-        const tags = teacherInfo.tags.map(item => item._id)
+    const userInfo = await User.findById(
+      { _id: ObjectId(userId) },
+      { password: 0, passwordHash: 0 }
+    )
+      .populate('city')
+      .populate('district');
+    if (userInfo) {
+      const { typeID } = userInfo;
+      if (typeID === UserTypes.TEACHER) {
+        const teacherInfo = await Teacher.findOne({
+          userId: ObjectId(userId)
+        }).populate('tags._id');
+        const formatSalary = formatCostHelper(
+          teacherInfo.salary.toString() + '000'
+        );
+        const tags = teacherInfo.tags.map(item => item._id);
         const contracts = await Contract.find({ teacherId: ObjectId(userId) });
-        const allInfo = {...userInfo._doc, ...teacherInfo._doc, tags, salary: formatSalary, userId, contracts};
+        const allInfo = {
+          ...userInfo._doc,
+          ...teacherInfo._doc,
+          tags,
+          salary: formatSalary,
+          userId,
+          contracts
+        };
         // get all contract
         // console.log("user info: ", allInfo);
-        return res.status(200).send({user: allInfo})
+        return res.status(200).send({ user: allInfo });
       } else {
-          // TODO student
-          // get all contract
-          const contracts = await Contract.find({studentId: ObjectId(userId)});
-        const result = {...userInfo, contracts}
-        return res.status(200).send({ user:result});
+        // TODO student
+        // get all contract
+        const contracts = await Contract.find({ studentId: ObjectId(userId) });
+        const result = { ...userInfo, contracts };
+        return res.status(200).send({ user: result });
       }
     } else {
-      return res.status(400).send({message: 'Tài khoản không tồn tại'})
-
+      return res.status(400).send({ message: 'Tài khoản không tồn tại' });
     }
+  } catch (err) {
+    console.log('err: ', err.message);
+    return res.status(500).send({ message: 'Có lỗi xảy ra' });
   }
-    catch (err) {
-      console.log("err: ", err.message)
-      return res.status(500).send({message: 'Có lỗi xảy ra'})
-
-    }
-
-
 
   // User.findById({ _id: ObjectId(userId) })
   //   .populate('city')
@@ -757,15 +754,13 @@ exports.login = (req, res) => {
         });
       }
       // generate a signed son web token with the contents of user object and return it in the response
-      const { _doc: { passwordHash, password, ...userInfo }, ...otherInfo } = user;
-      const token = jwt.sign(
-        { ...userInfo },
-        jwtSecretConfig.jwtSecret
-      );
-      console.log("other info: ", userInfo)
-      return res
-        .status(200)
-        .json({ user: { token, ...userInfo } });
+      const {
+        _doc: { passwordHash, password, ...userInfo },
+        ...otherInfo
+      } = user;
+      const token = jwt.sign({ ...userInfo }, jwtSecretConfig.jwtSecret);
+      console.log('other info: ', userInfo);
+      return res.status(200).json({ user: { token, ...userInfo } });
     });
   })(req, res);
 };
