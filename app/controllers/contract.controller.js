@@ -867,8 +867,11 @@ const District = require('../models/district.model');
 
 exports.deleteAll = async (req, res) => {
 
-  await Teacher.updateMany({about: null}, {
-  about: "Là giáo viên có nhiều năm kinh nghiệm."
-  })
+  // await Teacher.updateMany({about: null}, {
+  // about: "Là giáo viên có nhiều năm kinh nghiệm."
+  // })
+  const a = new Contract(req.body);
+  await a.save();
+  
   return res.status(200).send({ isSuccess: false });
 };
