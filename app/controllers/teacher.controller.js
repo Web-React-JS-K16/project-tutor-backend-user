@@ -5,7 +5,7 @@ const User = require('../models/user.model');
 const Contract = require('../models/contract.model');
 const Tag = require('../models/tag.model');
 const ContractTypes = require('../enums/EContractTypes');
-const Helpers = require("./../helpers/helpers")
+const Helpers = require('./../helpers/helpers');
 
 /**
  * Get info of teacher
@@ -96,13 +96,13 @@ exports.updateInfoTeacher = async (req, res) => {
   }
 };
 
-Date.prototype.addDays = function (days) {
+Date.prototype.addDays = function(days) {
   var date = new Date(this.valueOf());
   date.setDate(date.getDate() + days);
   return date;
 };
 
-Date.prototype.getWeek = function () {
+Date.prototype.getWeek = function() {
   var onejan = new Date(this.getFullYear(), 0, 1);
   var today = new Date(this.getFullYear(), this.getMonth(), this.getDate());
   var dayOfYear = (today - onejan + 86400000) / 86400000;
@@ -155,7 +155,6 @@ exports.getStatisticalData = (req, res) => {
             endDate.setSeconds(0);
             endDate.setMilliseconds(0);
             data = getDates(startDate, endDate);
-            console.log('data ', data);
           } else if (type === 'week') {
             const startWeek = parseInt(weekObj.start.week);
             const endWeek = parseInt(weekObj.end.week);
@@ -163,9 +162,7 @@ exports.getStatisticalData = (req, res) => {
             for (let i = startWeek; i <= endWeek; i++) {
               data.push({ week: i, year: year, value: 0 });
             }
-            console.log('data ', data);
           } else if (type === 'month') {
-            console.log(monthObj);
             const startMonth = parseInt(monthObj.start.month);
             const endMonth = parseInt(monthObj.end.month);
             const startYear = parseInt(monthObj.start.year);
@@ -187,12 +184,10 @@ exports.getStatisticalData = (req, res) => {
                 data.push({ month: i, year: startYear, value: 0 });
               }
             }
-            console.log('data ', data);
           } else if (type === 'year') {
             for (let i = parseInt(fromYear); i <= parseInt(toYear); i++) {
               data.push({ year: i, value: 0 });
             }
-            console.log('data ', data);
           }
 
           for (contract of contracts) {
@@ -288,82 +283,79 @@ exports.searchTeacher = async (req, res) => {
   try {
     const { keyword } = req.params;
     // const keyword = 'đại số 10'
-    console.log("keyword: ", keyword)
+    console.log('keyword: ', keyword);
 
     const result = await Teacher.aggregate([
       {
         $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user"
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user'
         }
       },
       {
         $lookup: {
-          from: "cities",
-          localField: "user.city",
-          foreignField: "_id",
-          as: "city"
+          from: 'cities',
+          localField: 'user.city',
+          foreignField: '_id',
+          as: 'city'
         }
       },
       {
         $lookup: {
-          from: "districts",
-          localField: "user.district",
-          foreignField: "_id",
-          as: "district"
+          from: 'districts',
+          localField: 'user.district',
+          foreignField: '_id',
+          as: 'district'
         }
       },
       { $unwind: '$tags' },
       {
         $lookup: {
-          from: "tags",
-          localField: "tags._id",
-          foreignField: "_id",
-          as: "tags"
+          from: 'tags',
+          localField: 'tags._id',
+          foreignField: '_id',
+          as: 'tags'
         }
       },
 
       {
         $unwind: {
-          path: "$city",
-          "preserveNullAndEmptyArrays": true
+          path: '$city',
+          preserveNullAndEmptyArrays: true
         }
       },
       {
         $unwind: {
-          path: "$district",
-          "preserveNullAndEmptyArrays": true
+          path: '$district',
+          preserveNullAndEmptyArrays: true
         }
       },
       {
         $unwind: {
-          path: "$tags",
-          "preserveNullAndEmptyArrays": true
+          path: '$tags',
+          preserveNullAndEmptyArrays: true
         }
       },
-
 
       {
         $match: {
           $or: [
-            { "tags.name": { $regex: keyword, $options: 'i' } },
-            { "user.displayName": { $regex: keyword, $options: 'i' } },
-            { "city.name": { $regex: keyword, $options: 'i' } },
-            { "district.name": { $regex: keyword, $options: 'i' } },
+            { 'tags.name': { $regex: keyword, $options: 'i' } },
+            { 'user.displayName': { $regex: keyword, $options: 'i' } },
+            { 'city.name': { $regex: keyword, $options: 'i' } },
+            { 'district.name': { $regex: keyword, $options: 'i' } },
             { about: { $regex: keyword, $options: 'i' } }
           ]
         }
-
       },
       {
-        $group:
-        {
-          _id: "$user._id"
+        $group: {
+          _id: '$user._id'
         }
-      },
-    ])
+      }
+    ]);
     // get arr id
     const idResult = result.map(item => ObjectId(item._id[0]));
     // get data
@@ -371,13 +363,16 @@ exports.searchTeacher = async (req, res) => {
       .populate('tags._id')
       .populate({
         path: 'userId',
-        select: ["-password", "-passwordHash"],
-        populate: [{
-          path: 'city'
-        }, {
-          path: 'district'
-        }]
-      })
+        select: ['-password', '-passwordHash'],
+        populate: [
+          {
+            path: 'city'
+          },
+          {
+            path: 'district'
+          }
+        ]
+      });
 
     return res.status(200).send({
       message: 'Cập nhật thông tin thành công.',
@@ -391,7 +386,7 @@ exports.searchTeacher = async (req, res) => {
       .status(500)
       .send({ message: 'Đã có lỗi xảy ra, vui lòng thử lại!' });
   }
-}
+};
 
 exports.getStatisticalDataHome = async (req, res) => {
   try {
@@ -400,11 +395,11 @@ exports.getStatisticalDataHome = async (req, res) => {
       {
         $match: {
           $and: [
-            { status: 5 },
+            { status: ContractTypes.IS_COMPLETED_BY_ADMIN },
             { isPaid: true },
-            { tags: { $ne: null } }
+            { teacherId: { $ne: null } }
           ]
-        },
+        }
       },
       Helpers.group,
       {
@@ -413,73 +408,71 @@ exports.getStatisticalDataHome = async (req, res) => {
           localField: '_id',
           foreignField: 'userId',
           as: 'teacher'
-        },
+        }
       },
       {
         $lookup: {
           from: 'users',
           localField: 'teacher.userId',
           foreignField: '_id',
-          as: 'user',
-        },
-      },
-      {
-        $lookup: {
-          from: "cities",
-          localField: "user.city",
-          foreignField: "_id",
-          as: "city"
+          as: 'user'
         }
       },
       {
         $lookup: {
-          from: "districts",
-          localField: "user.district",
-          foreignField: "_id",
-          as: "district"
+          from: 'cities',
+          localField: 'user.city',
+          foreignField: '_id',
+          as: 'city'
+        }
+      },
+      {
+        $lookup: {
+          from: 'districts',
+          localField: 'user.district',
+          foreignField: '_id',
+          as: 'district'
         }
       },
       {
         $unwind: {
-          path: "$teacher.tags",
+          path: '$teacher.tags',
           preserveNullAndEmptyArrays: true
         }
       },
       {
         $lookup: {
-          from: "tags",
-          localField: "teacher.tags._id",
-          foreignField: "_id",
-          as: "tag",
-
-        },
+          from: 'tags',
+          localField: 'teacher.tags._id',
+          foreignField: '_id',
+          as: 'tag'
+        }
       },
       { $sort: { total: -1 } },
       { $limit: 10 },
       {
         $project: {
-          "user._id": 1,
-          "user.displayName": 1,
-          "tag": 1,
-          "teacher.successRate": 1,
-          "teacher.ratings": 1,
-          "teacher.salary": 1,
-          "user.phone": 1,
-          "city.name": 1,
-          "district.name": 1,
-          "user.avatar": 1,
+          'user._id': 1,
+          'user.displayName': 1,
+          tag: 1,
+          'teacher.successRate': 1,
+          'teacher.ratings': 1,
+          'teacher.salary': 1,
+          'user.phone': 1,
+          'city.name': 1,
+          'district.name': 1,
+          'user.avatar': 1
         }
       }
-    ])
+    ]);
 
     if (data.length > 0) {
-      return res.status(200).json({ data })
-    }
-    else {
-      return res.status(400).json({ message: "Không tìm thấy dữ liệu" })
+      return res.status(200).json({ data });
+    } else {
+      return res.status(400).json({ message: 'Không tìm thấy dữ liệu' });
     }
   } catch (err) {
-    console.log('err: ', err)
-    return res.status(500).json({ message: "Có lỗi xảy ra." })
+    console.log('err: ', err);
+    return res.status(500).json({ message: 'Có lỗi xảy ra.' });
   }
-}
+};

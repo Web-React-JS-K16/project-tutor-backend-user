@@ -210,7 +210,7 @@ exports.getUserList = async (req, res) => {
       .then(async teachers => {
         var teacherList = [];
         for (teacher of teachers) {
-          const user = await User.find({ _id: ObjectId(teacher.userId._id) })
+          const user = await User.find({ _id: ObjectId(teacher.userId) })
             .populate('city')
             .populate('district');
 
@@ -256,7 +256,7 @@ exports.getUserList = async (req, res) => {
             email,
             displayName,
             avatar,
-            teacherId: _id,
+            _id,
             city,
             district,
             salary: formatSalary,
@@ -266,7 +266,7 @@ exports.getUserList = async (req, res) => {
             tags: tagList,
             jobs,
             hoursWorked,
-            _id: userId
+            userId
           });
         }
 
@@ -433,7 +433,6 @@ exports.countUsers = async (req, res) => {
 
 exports.getUserInfo = async (req, res) => {
   var userId = req.params.id || '';
-  console.log('userId: ', userId);
   try {
     const userInfo = await User.findById(
       { _id: ObjectId(userId) },
@@ -460,12 +459,8 @@ exports.getUserInfo = async (req, res) => {
           userId,
           contracts
         };
-        // get all contract
-        // console.log("user info: ", allInfo);
         return res.status(200).send({ user: allInfo });
       } else {
-        // TODO student
-        // get all contract
         const contracts = await Contract.find({ studentId: ObjectId(userId) });
         const result = { ...userInfo, contracts };
         return res.status(200).send({ user: result });
