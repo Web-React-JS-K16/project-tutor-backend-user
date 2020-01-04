@@ -36,14 +36,18 @@ passport.use(
       secretOrKey: jwtSecretConfig.jwtSecret
     },
     function(jwtPayload, cb) {
-      // console.log("on passport")
+      console.log("on passport")
       //find the user in db if needed. This functionality may be omitted if you store everything you'll need in JWT payload.
       var email = jwtPayload.email;
-      return UserModel.findOne({ email })
+      return UserModel.findOne({ email }, {
+        passwordHash: 0,
+        password: 0
+      })
         .then(user => {
           return cb(null, user);
         })
         .catch(err => {
+          console.log("err", err)
           return cb(err);
         });
     }

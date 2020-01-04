@@ -2,8 +2,11 @@ const mongoose = require('mongoose');
 
 const TeacherSchema = mongoose.Schema(
   {
-    salary: { type: mongoose.Schema.Types.Decimal128, default: 0 },
-    about: String,
+    salary: { type: Number, default: 200 },
+    about: {
+      type: String,
+      index: true
+    },
     successRate: { type: Number, default: 0 },
     ratings: { type: Number, default: 0 },
     tags: [
@@ -11,11 +14,6 @@ const TeacherSchema = mongoose.Schema(
         _id: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Tag'
-        },
-        name: String,
-        majorId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Major'
         }
       }
     ],
